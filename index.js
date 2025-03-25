@@ -1,0 +1,285 @@
+import express from "express";
+import cors from "cors";
+import mysql from "mysql2/promise";
+import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
+import nodemailer from "nodemailer";
+import randomstring from "randomstring";
+import dotenv from "dotenv";
+import fetch from "node-fetch";
+import blogRoutes from "./routes/blog.js";
+import authenticateToken from "./middleware/authMiddleware.js";
+import path from "path";
+import { fileURLToPath } from "url";
+
+dotenv.config();
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+const BACKEND_URL = process.env.BACKEND_URL;
+
+// ✅ ESM-safe __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// ✅ Static frontend path
+const FRONTEND_BUILD_PATH = path.join(__dirname, "frontend", "dist");
+
+// ✅ Middleware
+app.use(cors());
+app.use(express.json());
+app.use("/api/blog", blogRoutes);
+app.use(express.static(FRONTEND_BUILD_PATH));
+
+// ✅ MySQL Connection
+const db = mysql.createPool({
+  host: process.env.DB_HOST,
+  port: 3306,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASS,
+  database: process.env.DB_NAME,
+});
+
+db.getConnection()
+  .then(() => console.log("✅ Connected to MySQL Database"))
+  .catch((err) => {
+    console.error("❌ MySQL Connection Error:", err);
+    process.exit(1);
+  });
+
+// ✅ Config
+const {
+  JWT_SECRET,
+  FRONTEND_URL,
+  EMAIL_USER,
+  EMAIL_PASS,
+  EMAIL_SENDAS,
+  EMAIL_HOST = "smtp-relay.brevo.com",
+  EMAIL_PORT = 587,
+} = process.env;
+
+if (!JWT_SECRET || !EMAIL_USER || !EMAIL_PASS || !EMAIL_SENDAS || !FRONTEND_URL) {
+  console.error("❌ Missing environment variables in .env");
+  process.exit(1);
+}
+
+// ✅ Mailer
+const transporter = nodemailer.createTransport({
+  host: EMAIL_HOST,
+  port: Number(EMAIL_PORT),
+  auth: {
+    user: EMAIL_USER,
+    pass: EMAIL_PASS,
+  },
+});
+
+// ✅ Mojang UUID Fetcher
+async function getMinecraftUUID(username) {
+  const response = await fetch(`https://api.mojang.com/users/profiles/minecraft/${username}`);
+  if (!response.ok) return null;
+  const data = await response.json();
+  return data.id;
+}
+
+// ✅ API Status Check
+app.get("/api/status", (req, res) => {
+  res.json({ message: "Torrent Network API is running!" });
+});
+
+const router = express.Router();
+
+// 🔹 Register
+router.post("/auth/request-verification", async (req, res) => {
+  const { username, email, password } = req.body;
+  if (!username || !email || !password)
+    return res.status(400).json({ error: "All fields are required." });
+
+  try {
+    const [existing] = await db.query(
+      "SELECT * FROM users WHERE username = ? OR email = ?",
+      [username, email]
+    );
+    if (existing.length)
+      return res.status(400).json({ error: "User already exists." });
+
+    const uuid = await getMinecraftUUID(username);
+    if (!uuid) return res.status(404).json({ error: "Invalid Minecraft username." });
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const token = randomstring.generate(32);
+
+    await db.query(
+      "INSERT INTO users (uuid, username, email, password_hash, verification_token, email_verified) VALUES (?, ?, ?, ?, ?, 0)",
+      [uuid, username, email, hashedPassword, token]
+    );
+
+    const verificationLink = `${BACKEND_URL}/auth/verify-email?token=${token}`;
+
+    await transporter.sendMail({
+      from: EMAIL_SENDAS,
+      to: email,
+      subject: "Verify Your Email - Torrent Network",
+      text: `Click to verify: ${verificationLink}`,
+    });
+
+    res.json({ message: "Verification email sent!" });
+  } catch (err) {
+    console.error("Registration error:", err);
+    res.status(500).json({ error: "Server error." });
+  }
+});
+
+// 🔹 Resend Verification
+router.post("/auth/resend-verification", async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: "Email is required." });
+
+  try {
+    const [user] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
+    if (!user.length) return res.status(404).json({ error: "User not found." });
+
+    const player = user[0];
+    if (player.email_verified)
+      return res.status(400).json({ error: "Email already verified." });
+
+    const newToken = randomstring.generate(32);
+    await db.query("UPDATE users SET verification_token = ? WHERE email = ?", [
+      newToken,
+      email,
+    ]);
+
+    const verificationLink = `${BACKEND_URL}/auth/verify-email?token=${newToken}`;
+
+    await transporter.sendMail({
+      from: EMAIL_SENDAS,
+      to: email,
+      subject: "Resend Verification - Torrent Network",
+      text: `Click to verify your email: ${verificationLink}`,
+    });
+
+    res.json({ message: "Verification email resent!" });
+  } catch (err) {
+    console.error("Resend error:", err);
+    res.status(500).json({ error: "Server error." });
+  }
+});
+
+// 🔹 Verify Email
+router.get("/auth/verify-email", async (req, res) => {
+  const { token } = req.query;
+  if (!token) return res.status(400).json({ error: "Missing token." });
+
+  try {
+    const [user] = await db.query(
+      "SELECT * FROM users WHERE verification_token = ?",
+      [token]
+    );
+    if (!user.length)
+      return res.status(404).json({ error: "Invalid or expired token." });
+
+    const player = user[0];
+    await db.query(
+      "UPDATE users SET email_verified = 1, verification_token = NULL WHERE uuid = ?",
+      [player.uuid]
+    );
+
+    const jwtToken = jwt.sign(
+      { uuid: player.uuid, username: player.username },
+      JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    return res.redirect(`${FRONTEND_URL}/verify-success?token=${jwtToken}`);
+  } catch (err) {
+    console.error("Verification error:", err);
+    res.status(500).json({ error: "Server error." });
+  }
+});
+
+// 🔹 Login
+router.post("/auth/login", async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password)
+    return res.status(400).json({ error: "Missing credentials." });
+
+  try {
+    const [users] = await db.query("SELECT * FROM users WHERE username = ?", [
+      username,
+    ]);
+    if (!users.length)
+      return res.status(401).json({ error: "Invalid username or password." });
+
+    const user = users[0];
+    if (!user.email_verified)
+      return res.status(403).json({ error: "Email not verified." });
+
+    const isMatch = await bcrypt.compare(password, user.password_hash);
+    if (!isMatch)
+      return res.status(401).json({ error: "Invalid username or password." });
+
+    const token = jwt.sign(
+      { uuid: user.uuid, username: user.username },
+      JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    await db.query("UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE uuid = ?", [
+      user.uuid,
+    ]);
+
+    res.json({
+      message: "Login successful!",
+      token,
+      user: {
+        username: user.username,
+        uuid: user.uuid,
+      },
+    });
+  } catch (err) {
+    console.error("Login error:", err);
+    res.status(500).json({ error: "Server error." });
+  }
+});
+
+// 🔐 Protected Route
+router.get("/protected", authenticateToken, (req, res) => {
+  res.json({ message: `Welcome, ${req.user.username}!`, user: req.user });
+});
+
+app.use(router);
+
+// 🔹 Discord Preview
+router.get("/discord/preview", async (req, res) => {
+  try {
+    const response = await fetch("https://discord.com/api/guilds/1083850845596172339/preview", {
+      headers: {
+        Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+      },
+    });
+    const data = await response.json();
+    if (data.code === 0 && data.message?.includes("Unauthorized")) {
+      throw new Error("Discord unauthorized — check bot token or guild settings.");
+    }
+    res.json(data);
+  } catch (err) {
+    console.error("❌ Discord preview fetch failed:", err);
+    res.status(500).json({ error: "Failed to fetch Discord preview." });
+  }
+});
+
+// 🔹 Root API
+app.get("/api", (req, res) => {
+  res.json({ message: "Torrent Network API is running!" });
+});
+
+// ✅ Production fallback for React routes (e.g. /blog/:slug)
+app.get("*", (req, res) => {
+  res.sendFile(path.join(FRONTEND_BUILD_PATH, "index.html"));
+});
+
+// ✅ Start Server
+app.listen(PORT, () => {
+  console.log(`✅ Server running on port ${PORT}`);
+});
+
+export default db;

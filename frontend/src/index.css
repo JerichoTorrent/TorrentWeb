@@ -1,0 +1,44 @@
+@import "@fontsource/poppins";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Root Variables for Theme */
+:root {
+  --font-primary: "Poppins", sans-serif;
+  --color-text: rgba(255, 255, 255, 0.87);
+  --color-bg: #0e0e10;
+  --color-bg-alt: #18181b;
+  --color-accent-purple: #a970ff;
+  --color-accent-gold: #ffcc66;
+  --color-border: #2d2d34;
+  --color-hover: #d4af37;
+
+  font-family: var(--font-primary);
+  background: linear-gradient(180deg, #0e0e10, #1a1a1e);
+  text-rendering: optimizeLegibility;
+}
+
+@keyframes float-slow {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes float-fast {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+  100% { transform: translateY(0); }
+}
+
+.animate-float-slow {
+  animation: float-slow 8s ease-in-out infinite;
+}
+
+.animate-float-fast {
+  animation: float-fast 5s ease-in-out infinite;
+}
+
+html {
+  scroll-behavior: smooth;
+}
