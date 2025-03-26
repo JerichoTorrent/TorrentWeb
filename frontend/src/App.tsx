@@ -17,6 +17,7 @@ import ResetPassword from "./pages/ResetPassword";
 import ResetSuccess from "./pages/ResetSuccess";
 import Rules from "./pages/Rules";
 import Play from "./pages/Play";
+import Terms from "./pages/Terms";
 import { JSX } from "react"; // ✅ Prevents JSX errors
 
 // Protected Route Wrapper
@@ -45,6 +46,7 @@ function App() {
           <Route path="/blog/:slug" element={<BlogPostPage />} />
           <Route path="/rules" element={<Rules />} />
           <Route path="/play" element={<Play />} />
+          <Route path="/terms" element={<Terms />} />
         </Routes>
       </Router>
     </AuthProvider>
