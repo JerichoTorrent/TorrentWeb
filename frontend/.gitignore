@@ -23,5 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 
+# Ignore large files
+*.gif
+
 # Obviously ignore .env you silly goose
 .env
