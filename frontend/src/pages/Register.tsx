@@ -2,8 +2,7 @@
 import { useState, useEffect } from "react";
 import { registerUser } from "../api";
 import { useNavigate } from "react-router-dom";
-import Header from "../components/Header";
-import Navbar from "../components/Navbar";
+import PageLayout from "../components/PageLayout";
 
 const Register = () => {
   const navigate = useNavigate();
@@ -11,6 +10,8 @@ const Register = () => {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -25,9 +26,25 @@ const Register = () => {
     }
   }, [showResend, cooldown]);
 
+  const getPasswordStrength = (pwd: string): "Weak" | "Medium" | "Strong" => {
+    if (pwd.length < 6) return "Weak";
+    const hasUpper = /[A-Z]/.test(pwd);
+    const hasLower = /[a-z]/.test(pwd);
+    const hasNumber = /\d/.test(pwd);
+    const hasSymbol = /[\W_]/.test(pwd);
+    const score = [hasUpper, hasLower, hasNumber, hasSymbol].filter(Boolean).length;
+    return score >= 3 ? "Strong" : "Medium";
+  };
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage("");
+
+    if (!termsAccepted) {
+      setMessage("❌ You must accept the Terms and Conditions.");
+      return;
+    }
+
     setIsLoading(true);
 
     const result = await registerUser(username, email, password);
@@ -69,27 +86,23 @@ const Register = () => {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0e0e10] to-[#1a1a1e] text-white">
-      {/* Mobile: Navbar above Header */}
-      <div className="block sm:hidden">
-        <Navbar />
-        <Header />
-      </div>
-  
-      {/* Desktop: Header above Navbar */}
-      <div className="hidden sm:block">
-        <Header />
-        <Navbar />
-      </div>
+  const strength = getPasswordStrength(password);
+  const strengthColor =
+    strength === "Strong"
+      ? "text-green-400"
+      : strength === "Medium"
+      ? "text-yellow-400"
+      : "text-red-400";
 
-      <div className="flex flex-col items-center justify-center min-h-screen md:-mt-16">
+  return (
+    <PageLayout>
+      <div className="flex flex-col items-center justify-center min-h-[70vh] mt-4 sm:mt-0">
         <h2 className="text-4xl font-bold text-yellow-400 mb-10 text-center leading-tight pt-2">
           Register for Torrent Network
         </h2>
 
-        <div className="relative bg-[#1f1f1f] p-10 w-full max-w-md rounded-xl border border-[#2d2d34] shadow-[0_0_20px_rgba(0,0,0,0.6)]">
-          <form onSubmit={handleRegister} className="relative flex flex-col gap-6">
+        <div className="bg-[#1f1f1f] p-10 w-full max-w-md rounded-xl border border-[#2d2d34] shadow-[0_0_20px_rgba(0,0,0,0.6)]">
+          <form onSubmit={handleRegister} className="flex flex-col gap-6">
             <input
               type="text"
               placeholder="Minecraft Username"
@@ -108,14 +121,45 @@ const Register = () => {
               required
             />
 
-            <input
-              type="password"
-              placeholder="Password"
-              className="px-5 py-4 w-full text-lg rounded-md placeholder-gray-400 text-white bg-[#2a2a2e] border border-[#5b5b64] focus:outline-none focus:border-yellow-400 transition-all"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="Password"
+                className="px-5 py-4 w-full text-lg rounded-md placeholder-gray-400 text-white bg-[#2a2a2e] border border-[#5b5b64] focus:outline-none focus:border-yellow-400 transition-all pr-12"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-3 top-3 text-gray-400 hover:text-white"
+              >
+                {showPassword ? "🙈" : "👁️"}
+              </button>
+              {password && (
+                <p className={`text-sm mt-1 ${strengthColor}`}>
+                  Password strength: {strength}
+                </p>
+              )}
+            </div>
+
+            <label className="flex items-center gap-2 text-sm text-gray-400">
+              <input
+                type="checkbox"
+                checked={termsAccepted}
+                onChange={(e) => setTermsAccepted(e.target.checked)}
+                required
+                className="accent-yellow-400"
+              />
+              I accept the{" "}
+              <a
+                href="/terms"
+                className="text-purple-400 hover:text-yellow-300 underline transition"
+              >
+                Torrent Network Terms and Conditions
+              </a>
+            </label>
 
             <button
               type="submit"
@@ -162,7 +206,7 @@ const Register = () => {
           </div>
         </div>
       </div>
-    </div>
+    </PageLayout>
   );
 };
 

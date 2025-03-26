@@ -1,7 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import Header from "../components/Header";
-import Navbar from "../components/Navbar";
+import PageLayout from "../components/PageLayout";
 
 interface TocItem {
   text: string;
@@ -38,15 +37,7 @@ const BlogPostPage = () => {
   if (error) {
     return (
       <div className="min-h-screen bg-black text-white">
-        <div className="block sm:hidden">
-          <Navbar />
-          <Header />
-        </div>
-        <div className="hidden sm:block">
-          <Header />
-          <Navbar />
-        </div>
-
+        {/* You can wrap this in <PageLayout> too if you want consistent header/nav */}
         <div className="max-w-3xl mx-auto px-6 py-20 text-center">
           <h1 className="text-4xl font-bold text-red-500 mb-4">404 - Post Not Found</h1>
           <p className="text-gray-400 mb-4">The blog post you’re looking for doesn’t exist.</p>
@@ -64,24 +55,12 @@ const BlogPostPage = () => {
   if (!post) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0e0e10] to-[#1a1a1e] text-white">
-      {/* Responsive Header/Navbar layout */}
-      <div className="block sm:hidden">
-        <Navbar />
-        <Header />
-      </div>
-      <div className="hidden sm:block">
-        <Header />
-        <Navbar />
-      </div>
-
-      {/* Responsive Blog Content + ToC */}
-      <div className="max-w-6xl mx-auto px-6 py-12 flex flex-col lg:flex-row gap-12">
-        {/* Table of Contents (mobile first, floats right on desktop) */}
+    <PageLayout>
+      <div className="flex flex-col lg:flex-row gap-12">
+        {/* Table of Contents */}
         {post.toc && post.toc.length > 0 && (
           <aside className="w-full lg:w-1/3 lg:max-w-sm bg-[#111] border border-gray-700 rounded-lg p-4 h-fit lg:sticky top-24 self-start order-1 lg:order-2">
             <h2 className="text-lg font-semibold text-purple-300 mb-3">Table of Contents</h2>
-            {/* Jump to Content (mobile only) */}
             <a
               href="#blog-content"
               className="block mb-4 text-xs text-gray-400 underline lg:hidden"
@@ -102,7 +81,7 @@ const BlogPostPage = () => {
           </aside>
         )}
 
-        {/* Blog content */}
+        {/* Blog Content */}
         <div className="w-full lg:w-2/3 order-2 lg:order-1" id="blog-content">
           <h1 className="text-4xl font-bold text-yellow-400 mb-4">{post.title}</h1>
           <p className="text-gray-400 text-sm mb-8">
@@ -136,7 +115,7 @@ const BlogPostPage = () => {
           </div>
         </div>
       </div>
-    </div>
+    </PageLayout>
   );
 };
 

@@ -1,10 +1,8 @@
 /** @jsxImportSource react */
-import { useState } from "react";
+import { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import AuthContext from "../context/AuthContext";
-import { useContext } from "react";
-import Header from "../components/Header";
-import Navbar from "../components/Navbar";
+import PageLayout from "../components/PageLayout";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -55,26 +53,14 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0e0e10] to-[#1a1a1e] text-white">
-      {/* Mobile: Navbar above Header */}
-      <div className="block sm:hidden">
-        <Navbar />
-        <Header />
-      </div>
-  
-      {/* Desktop: Header above Navbar */}
-      <div className="hidden sm:block">
-        <Header />
-        <Navbar />
-      </div>
-
-      <div className="flex flex-col items-center justify-center min-h-screen md:-mt-16">
+    <PageLayout>
+      <div className="flex flex-col items-center justify-center min-h-[70vh] mt-4 sm:mt-0">
         <h2 className="text-4xl font-bold text-yellow-400 mb-10 text-center leading-tight pt-2">
           Login to Torrent Network
         </h2>
 
-        <div className="relative bg-[#1f1f1f] p-10 w-full max-w-md rounded-xl border border-[#2d2d34] shadow-[0_0_20px_rgba(0,0,0,0.6)]">
-          <div className="relative flex flex-col gap-6">
+        <div className="bg-[#1f1f1f] p-10 w-full max-w-md rounded-xl border border-[#2d2d34] shadow-[0_0_20px_rgba(0,0,0,0.6)]">
+          <div className="flex flex-col gap-6">
             <input
               type="text"
               placeholder="Minecraft Username"
@@ -96,7 +82,9 @@ const Login = () => {
             <button
               onClick={handleLogin}
               className={`px-5 py-4 w-full text-lg font-semibold text-black bg-yellow-400 rounded-md shadow-md transition-all ${
-                isLoading ? "opacity-50 cursor-not-allowed" : "hover:shadow-[0_0_15px_rgba(128,0,255,0.8)]"
+                isLoading
+                  ? "opacity-50 cursor-not-allowed"
+                  : "hover:shadow-[0_0_15px_rgba(128,0,255,0.8)]"
               }`}
               disabled={isLoading}
             >
@@ -106,7 +94,9 @@ const Login = () => {
             {message && (
               <p
                 className={`text-sm text-center mt-2 ${
-                  message.startsWith("✅") ? "text-green-400" : "text-red-400"
+                  message.startsWith("✅")
+                    ? "text-green-400"
+                    : "text-red-400"
                 } animate-fade-in`}
               >
                 {message}
@@ -131,7 +121,7 @@ const Login = () => {
           </div>
         </div>
       </div>
-    </div>
+    </PageLayout>
   );
 };
 

@@ -1,5 +1,4 @@
-import Header from "../components/Header";
-import Navbar from "../components/Navbar";
+import PageLayout from "../components/PageLayout";
 
 const voteSites = [
   { name: "FindMCServer", url: "https://findmcserver.com/server/torrent" },
@@ -24,19 +23,7 @@ const voteSites = [
 
 const Vote = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0e0e10] to-[#1a1a1e] text-white">
-      {/* Mobile: Navbar above Header */}
-      <div className="block sm:hidden">
-        <Navbar />
-        <Header />
-      </div>
-  
-      {/* Desktop: Header above Navbar */}
-      <div className="hidden sm:block">
-        <Header />
-        <Navbar />
-      </div>
-      
+    <PageLayout>
       <div className="max-w-5xl mx-auto px-6 py-12">
         {/* Panel */}
         <div className="bg-[#1f1f1f] rounded-lg shadow-lg p-8 space-y-8">
@@ -66,7 +53,7 @@ const Vote = () => {
           </div>
         </div>
       </div>
-    </div>
+    </PageLayout>
   );
 };
 

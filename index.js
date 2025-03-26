@@ -241,6 +241,70 @@ router.post("/auth/login", async (req, res) => {
   }
 });
 
+// 🔹 Forgot Password - Request Reset Link
+router.post("/auth/forgot-password", async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: "Email is required." });
+
+  try {
+    const [users] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
+    if (!users.length) return res.status(404).json({ error: "User not found." });
+
+    const user = users[0];
+
+    // Generate a one-time reset token
+    const resetToken = randomstring.generate(32);
+    const expiresAt = new Date(Date.now() + 1000 * 60 * 30); // 30 mins
+
+    await db.query(
+      "UPDATE users SET reset_token = ?, reset_expires = ? WHERE email = ?",
+      [resetToken, expiresAt, email]
+    );
+
+    const resetLink = `${FRONTEND_URL}/reset-password?token=${resetToken}`;
+
+    await transporter.sendMail({
+      from: EMAIL_SENDAS,
+      to: email,
+      subject: "Reset Your Password - Torrent Network",
+      text: `Click the link below to reset your password:\n\n${resetLink}`,
+    });
+
+    res.json({ message: "Reset email sent!" });
+  } catch (err) {
+    console.error("Forgot Password Error:", err);
+    res.status(500).json({ error: "Server error." });
+  }
+});
+
+// 🔹 Reset Password
+router.post("/auth/reset-password", async (req, res) => {
+  const { token, newPassword } = req.body;
+  if (!token || !newPassword)
+    return res.status(400).json({ error: "Missing token or password." });
+
+  try {
+    const [users] = await db.query(
+      "SELECT * FROM users WHERE reset_token = ? AND reset_expires > NOW()",
+      [token]
+    );
+    if (!users.length)
+      return res.status(400).json({ error: "Invalid or expired token." });
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await db.query(
+      "UPDATE users SET password_hash = ?, reset_token = NULL, reset_expires = NULL WHERE uuid = ?",
+      [hashedPassword, users[0].uuid]
+    );
+
+    res.json({ message: "Password reset successful!" });
+  } catch (err) {
+    console.error("Reset Password Error:", err);
+    res.status(500).json({ error: "Server error." });
+  }
+});
+
 // 🔐 Protected Route
 router.get("/protected", authenticateToken, (req, res) => {
   res.json({ message: `Welcome, ${req.user.username}!`, user: req.user });

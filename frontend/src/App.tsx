@@ -12,6 +12,9 @@ import Map from "./pages/Map";
 import Vote from "./pages/Vote";
 import Blog from "./pages/Blog";
 import BlogPostPage from "./pages/BlogPost";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import ResetSuccess from "./pages/ResetSuccess";
 import { JSX } from "react"; // ✅ Prevents JSX errors
 
 // Protected Route Wrapper
@@ -28,6 +31,9 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/reset-success" element={<ResetSuccess />} />
           <Route path="/verify-success" element={<VerifySuccess />} />
           <Route path="/auth/login" element={<LoginCallback />} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
