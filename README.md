@@ -154,10 +154,10 @@ Obviously as it is now, it's quite unfinished and even when it is finished, you 
 
 ### Credits  
 
-If you use this template, please include the link to my site in the footer (that I will code.. eventually). This is the only credit I'm asking for.
-Website: <https://torrentsmp.com>
-Discord: <https://discord.gg/torrent>
-Server IP: torrentsmp.com
-Read my blog: <https://blog.torrentsmp.com>
-Give me money: <https://patreon.com/torrentnetwork>
+If you use this template, please include the link to my site in the footer (that I will code.. eventually). This is the only credit I'm asking for.  
+Website: <https://torrentsmp.com>  
+Discord: <https://discord.gg/torrent>  
+Server IP: torrentsmp.com  
+Read my blog: <https://blog.torrentsmp.com>  
+Give me money: <https://patreon.com/torrentnetwork>  
 Give me crypto (c'mon bro): 0x0b544473a05E6B703066129498F758C7e1268FD4
