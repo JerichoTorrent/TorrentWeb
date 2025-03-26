@@ -1,9 +1,6 @@
 # 🌩️ Torrent Network Website Template
 
-This is a full-stack React + TypeScript template for Minecraft server websites with user login, blog, voting, account dashboard, and more. Originally designed for the Torrent Network, it's now available for anyone to fork and adapt.  
-Check it out here (when it's actually done): <https://torrentsmp.com>  
-Join our Discord if you're a legend: <https://discord.gg/torrent>  
-And/or play on our server if you're an absolute chad, IP: torrentsmp.com  
+This is a full-stack React + TypeScript template for Minecraft server websites with user login, blog, voting, account dashboard, and more. Originally designed for the Torrent Network, it's now available for anyone to fork and adapt.
 ---
 
 ## 🚀 Features  
