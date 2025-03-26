@@ -14,6 +14,7 @@ interface BlogPost {
   slug: string;
   content: string; // raw HTML
   tags?: string[] | string;
+  author?: string;
   toc?: TocItem[];
 }
 
@@ -83,8 +84,9 @@ const BlogPostPage = () => {
 
         {/* Blog Content */}
         <div className="w-full lg:w-2/3 order-2 lg:order-1" id="blog-content">
-          <h1 className="text-4xl font-bold text-yellow-400 mb-4">{post.title}</h1>
-          <p className="text-gray-400 text-sm mb-8">
+          <h1 className="text-4xl font-bold text-yellow-400 mb-2">{post.title}</h1>
+
+          <p className="text-sm text-gray-400 mb-1">
             {(() => {
               const rawDate = post.date;
               const parsedDate = rawDate
@@ -101,6 +103,10 @@ const BlogPostPage = () => {
             })()}
           </p>
 
+          {post.author && (
+            <p className="text-sm text-gray-500 mb-6">By {post.author}</p>
+          )}
+
           <article
             className="prose prose-invert max-w-none text-gray-200 scroll-smooth [&_h1]:scroll-mt-24 [&_h2]:scroll-mt-24 [&_h3]:scroll-mt-24"
             dangerouslySetInnerHTML={{ __html: post.content }}
@@ -108,10 +114,7 @@ const BlogPostPage = () => {
 
           {/* Tags */}
           <div className="mt-10 text-sm text-gray-500 italic">
-            Tags:{" "}
-            {Array.isArray(post.tags)
-              ? post.tags.join(", ")
-              : post.tags || "none"}
+            Tags: {Array.isArray(post.tags) ? post.tags.join(", ") : post.tags || "none"}
           </div>
         </div>
       </div>

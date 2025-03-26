@@ -5,6 +5,7 @@ export interface PostMetadata {
   date: string;
   description: string;
   tags?: string[];
+  author?: string;
   slug: string;
 }
 
@@ -20,12 +21,28 @@ export async function getAllPosts(): Promise<Post[]> {
 
   for (const path in files) {
     const raw = files[path] as string;
-    const { attributes, body } = fm<PostMetadata>(raw);
+
+    // Allow any frontmatter attributes to be parsed
+    const { attributes, body } = fm<any>(raw);
 
     const slug = path.split('/').pop()?.replace('.markdown', '') ?? '';
+
+    // Extract fields with fallback to undefined
+    const {
+      title,
+      date,
+      description,
+      tags,
+      author,
+    } = attributes;
+
     posts.push({
       metadata: {
-        ...attributes,
+        title,
+        date,
+        description,
+        tags,
+        author,
         slug,
       },
       content: body,
@@ -33,5 +50,8 @@ export async function getAllPosts(): Promise<Post[]> {
     });
   }
 
-  return posts.sort((a, b) => new Date(b.metadata.date).getTime() - new Date(a.metadata.date).getTime());
+  return posts.sort(
+    (a, b) =>
+      new Date(b.metadata.date).getTime() - new Date(a.metadata.date).getTime()
+  );
 }

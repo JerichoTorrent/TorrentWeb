@@ -10,6 +10,7 @@ type Post = {
     title: string;
     date: string;
     description: string;
+    author?: string;
   };
 };
 
@@ -65,7 +66,10 @@ const Blog: React.FC = () => {
                     {post.metadata.title}
                   </h2>
                 </Link>
-                <p className="text-sm text-gray-400 mb-3">{displayDate}</p>
+                <p className="text-sm text-gray-400 mb-1">{displayDate}</p>
+                {post.metadata.author && (
+                  <p className="text-sm text-gray-500 mb-3">By {post.metadata.author}</p>
+                )}
                 <div
                   className="prose prose-invert prose-p:leading-relaxed prose-p:mb-4 max-w-none text-gray-300"
                   dangerouslySetInnerHTML={{ __html: post.metadata.description }}
