@@ -68,12 +68,13 @@ router.get("/", (req, res) => {
           title: data.title || slug,
           date: data.date || null,
           description,
+          author: data.author || null, // ✅ add this line
           tags: Array.isArray(data.tags)
             ? data.tags
             : data.tags
               ? [data.tags]
               : [],
-        },
+        },        
       };
     });
 
