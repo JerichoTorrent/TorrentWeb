@@ -2,6 +2,7 @@ import React from "react";
 import Header from "./Header";
 import Navbar from "./Navbar";
 import Breadcrumbs from "./Breadcrumbs";
+import Footer from "./Footer";
 
 interface PageLayoutProps {
   children: React.ReactNode;
@@ -10,7 +11,7 @@ interface PageLayoutProps {
 
 const PageLayout: React.FC<PageLayoutProps> = ({ children, fullWidth = false }) => {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0e0e10] to-[#1a1a1e] text-white">
+    <div className="min-h-screen bg-gradient-to-b from-[#0e0e10] to-[#1a1a1e] text-white flex flex-col">
       {/* Header/Navbar layout */}
       <div className="block sm:hidden">
         <Navbar />
@@ -22,8 +23,8 @@ const PageLayout: React.FC<PageLayoutProps> = ({ children, fullWidth = false }) 
       </div>
 
       {/* Shared container — allow override */}
-      <div
-        className={`relative w-full px-4 sm:px-8 md:px-12 lg:px-20 xl:px-32 ${
+      <main
+        className={`relative w-full px-4 sm:px-8 md:px-12 lg:px-20 xl:px-32 flex-grow ${
           fullWidth ? "" : "max-w-6xl"
         } mx-auto pt-16 pb-12`}
       >
@@ -32,7 +33,9 @@ const PageLayout: React.FC<PageLayoutProps> = ({ children, fullWidth = false }) 
         </div>
 
         {children}
-      </div>
+      </main>
+
+      <Footer />
     </div>
   );
 };
