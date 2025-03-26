@@ -6,7 +6,7 @@ const ResetSuccess = () => {
   const navigate = useNavigate();
 
   return (
-    <PageLayout>
+    <PageLayout fullWidth>
       <div className="flex flex-col items-center justify-center min-h-[70vh] text-center">
         <h1 className="text-4xl font-bold text-green-400 mb-4">✅ Password Reset Successful</h1>
         <p className="text-gray-300 text-lg mb-6">

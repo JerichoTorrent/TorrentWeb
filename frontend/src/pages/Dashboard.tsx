@@ -7,7 +7,7 @@ const Dashboard = () => {
   const { user } = useContext(AuthContext);
 
   return (
-    <PageLayout>
+    <PageLayout fullWidth>
       <h1 className="text-4xl font-bold text-yellow-400 mb-10 text-center leading-tight pt-2 md:mt-16">
         Your Dashboard
       </h1>

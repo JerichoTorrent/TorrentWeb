@@ -62,7 +62,7 @@ const ResetPassword = () => {
   };
 
   return (
-    <PageLayout>
+    <PageLayout fullWidth>
       <div className="flex flex-col items-center justify-center min-h-[70vh] mt-0 sm:mt-0">
         <h2 className="text-4xl font-bold text-yellow-400 mb-10 text-center leading-tight pt-2">
           Reset Your Password

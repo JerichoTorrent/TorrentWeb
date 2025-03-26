@@ -23,7 +23,7 @@ const voteSites = [
 
 const Vote = () => {
   return (
-    <PageLayout>
+    <PageLayout fullWidth>
       <div className="max-w-5xl mx-auto px-6 py-12">
         {/* Panel */}
         <div className="bg-[#1f1f1f] rounded-lg shadow-lg p-8 space-y-8">

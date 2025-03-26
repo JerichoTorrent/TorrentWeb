@@ -55,7 +55,7 @@ const BlogPostPage = () => {
   if (!post) return null;
 
   return (
-    <PageLayout>
+    <PageLayout fullWidth>
       <div className="flex flex-col lg:flex-row gap-12">
         {/* Table of Contents */}
         {post.toc && post.toc.length > 0 && (

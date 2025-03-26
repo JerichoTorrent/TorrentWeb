@@ -36,7 +36,7 @@ const Blog: React.FC = () => {
   const currentPosts = posts.slice(startIndex, startIndex + POSTS_PER_PAGE);
 
   return (
-    <PageLayout>
+    <PageLayout fullWidth>
       <h1 className="text-4xl font-bold text-yellow-400 mb-10 text-center pt-2 md:mt-8">
         Blog
       </h1>
