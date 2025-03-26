@@ -21,7 +21,7 @@ I present to you, the good people of Torrent, part 1 of the cosmetic update. Thi
 <!--more-->
 
 <video width="560" height="315" controls>
-  <source src="{{ "/assets/frostlord.mp4" | relative_url }}" type="video/mp4">
+  <source src="/assets/frostlord.mp4" type="video/mp4" />
   Your browser does not support this video. Maybe try using a different browser?
 </video>
 
