@@ -88,15 +88,14 @@ const BlogPostPage = () => {
             >
               Jump to content ↓
             </a>
-            <ul className="space-y-2 text-sm">
+            <ul className="text-sm space-y-1 pl-2">
               {post.toc.map((item, index) => (
-                <li key={index} className={`ml-${(item.level - 1) * 4}`}>
-                  <a
-                    href={`#${item.id}`}
-                    className="text-purple-400 hover:text-purple-300 transition"
-                  >
-                    {item.text}
-                  </a>
+                <li
+                  key={index}
+                  style={{ marginLeft: `${(item.level - 1) * 1.5}rem` }}
+                  className="list-disc marker:text-purple-500 text-purple-400 hover:text-purple-300 transition"
+                >
+                  <a href={`#${item.id}`}>{item.text}</a>
                 </li>
               ))}
             </ul>
