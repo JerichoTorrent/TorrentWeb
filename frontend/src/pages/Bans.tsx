@@ -12,7 +12,7 @@ const boxes = [
   },
   {
     title: "Mutes",
-    description: "See players who have been muted due to chat violations or abuse.",
+    description: "See players who have been muted permanently or temporarily for abuse in chat.",
     image: "/mute.png",
     link: "/bans/list?type=mute",
     bg: "bg-yellow-600/10 border-yellow-600"
@@ -44,9 +44,9 @@ const BansPage = () => {
               <img
                 src={box.image}
                 alt={box.title}
-                className="w-16 h-16 mb-4 mx-auto"
+                className="w-52 h-52 object-cover rounded mb-6 mx-auto shadow-lg"
               />
-              <h2 className="text-xl font-semibold text-purple-300 text-center mb-2">
+              <h2 className="text-2xl font-semibold text-purple-300 text-center mb-2">
                 {box.title}
               </h2>
               <p className="text-gray-400 text-sm text-center mb-4">
