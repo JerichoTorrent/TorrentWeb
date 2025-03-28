@@ -21,6 +21,8 @@ import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Affiliates from "./pages/Affiliates";
 import BansPage from "./pages/Bans";
+import BansListPage from "./pages/BansList";
+import PlayerPunishments from "./pages/PlayerPunishments";
 import { JSX } from "react"; // ✅ Prevents JSX errors
 
 // Protected Route Wrapper
@@ -53,6 +55,8 @@ function App() {
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/affiliates" element={<Affiliates />} />
           <Route path="/bans" element={<BansPage />} />
+          <Route path="/bans/list" element={<BansListPage />} />
+          <Route path="/bans/:uuid" element={<PlayerPunishments />} />
         </Routes>
       </Router>
     </AuthProvider>
