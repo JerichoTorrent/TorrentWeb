@@ -20,6 +20,15 @@ export default defineConfig({
   ],
   build: {
     sourcemap: true,
+    chunkSizeWarningLimit: 1000, // ⚠️ increase limit from 500KB to 1000KB
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom'],             // separate core React
+          router: ['react-router-dom'],              // separate React Router
+        },
+      },
+    },
   },
   server: {
     allowedHosts: ['deadcitystudios.com'],
