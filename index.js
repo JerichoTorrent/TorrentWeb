@@ -8,6 +8,7 @@ import randomstring from "randomstring";
 import dotenv from "dotenv";
 import fetch from "node-fetch";
 import blogRoutes from "./routes/blog.js";
+import bansRoutes from "./routes/bans.js";
 import authenticateToken from "./middleware/authMiddleware.js";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -29,6 +30,7 @@ const FRONTEND_BUILD_PATH = path.join(__dirname, "frontend", "dist");
 app.use(cors());
 app.use(express.json());
 app.use("/api/blog", blogRoutes);
+app.use("/api/bans", bansRoutes);
 app.use(express.static(FRONTEND_BUILD_PATH));
 
 // ✅ MySQL Connection
