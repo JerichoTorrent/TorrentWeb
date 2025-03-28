@@ -33,6 +33,8 @@ const BanListPage = () => {
   const [loading, setLoading] = useState(true);
   const [bedrockNames, setBedrockNames] = useState<Record<string, string>>({});
 
+  const CACHE_EXPIRY_MS = 10 * 60 * 1000;
+
   const isBedrock = (uuid: string) => uuid.startsWith("00000000");
 
   const getAvatarUrl = (name: string) =>
@@ -52,25 +54,60 @@ const BanListPage = () => {
 
   const fetchData = () => {
     setLoading(true);
+    const cacheKey = `punishments_${type}_${currentPage}_${searchQuery}`;
+    const cached = localStorage.getItem(cacheKey);
+    const now = Date.now();
+
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (now - parsed.timestamp < CACHE_EXPIRY_MS) {
+        setData(parsed.data);
+        setTotalPages(parsed.totalPages);
+        setLoading(false);
+        parsed.data.forEach((p: Punishment) => {
+          if (isBedrock(p.uuid)) fetchBedrockName(p.uuid);
+        });
+        return;
+      } else {
+        localStorage.removeItem(cacheKey);
+      }
+    }
+
     fetch(`/api/bans/list?type=${type}&page=${currentPage}&search=${searchQuery}`)
       .then((res) => res.json())
       .then((res) => {
         setData(res.data);
         setTotalPages(res.totalPages);
         setLoading(false);
-
+        localStorage.setItem(
+          cacheKey,
+          JSON.stringify({ timestamp: now, data: res.data, totalPages: res.totalPages })
+        );
         res.data.forEach((p: Punishment) => {
-          if (isBedrock(p.uuid)) {
-            fetchBedrockName(p.uuid);
-          }
+          if (isBedrock(p.uuid)) fetchBedrockName(p.uuid);
         });
       });
   };
 
   useEffect(() => {
+    const cachedCounts = localStorage.getItem("punishment_counts");
+    const now = Date.now();
+
+    if (cachedCounts) {
+      const parsed = JSON.parse(cachedCounts);
+      if (now - parsed.timestamp < CACHE_EXPIRY_MS) {
+        setCounts(parsed.data);
+      } else {
+        localStorage.removeItem("punishment_counts");
+      }
+    }
+
     fetch("/api/bans/counts")
       .then((res) => res.json())
-      .then((res) => setCounts(res));
+      .then((res) => {
+        setCounts(res);
+        localStorage.setItem("punishment_counts", JSON.stringify({ timestamp: now, data: res }));
+      });
   }, []);
 
   useEffect(() => {
@@ -133,9 +170,9 @@ const BanListPage = () => {
               return (
                 <div
                   key={i}
-                  className="bg-[#1e1e22] border border-gray-700 rounded-lg p-4 flex items-center gap-4 justify-between"
+                  className="bg-[#1e1e22] border border-gray-700 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center gap-4 justify-between"
                 >
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-start gap-4">
                     <img
                       src={getAvatarUrl(name)}
                       onError={(e) => (e.currentTarget.src = "https://mc-heads.net/avatar/Steve")}
@@ -149,7 +186,7 @@ const BanListPage = () => {
                       >
                         {name}
                       </Link>
-                      <p className="text-gray-400 text-sm truncate max-w-xs" title={p.reason}>
+                      <p className="text-gray-400 text-sm break-words max-w-full sm:max-w-xs" title={p.reason}>
                         {p.reason}
                       </p>
                       <div className="text-xs text-gray-500 space-y-1 mt-1">
@@ -168,7 +205,7 @@ const BanListPage = () => {
                   </div>
                   {type !== "kick" && (
                     <span
-                      className={`text-xs px-3 py-1 rounded-full font-medium ${
+                      className={`text-xs px-3 py-1 rounded-full font-medium self-start sm:self-auto ${
                         p.active
                           ? "bg-green-700 text-green-200"
                           : "bg-red-700 text-red-200"
@@ -184,7 +221,7 @@ const BanListPage = () => {
         )}
 
         {totalPages > 1 && (
-          <div className="flex justify-center mt-8 gap-2">
+          <div className="flex flex-wrap justify-center mt-8 gap-2 max-w-full overflow-hidden">
             {Array.from({ length: totalPages }, (_, i) => (
               <button
                 key={i}
