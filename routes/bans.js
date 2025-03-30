@@ -2,8 +2,9 @@ import express from "express";
 import mysql from "mysql2/promise";
 import dotenv from "dotenv";
 import fetch from "node-fetch";
+import requireAuth from "../middleware/authMiddleware.js";
 
-dotenv.config();
+dotenv.config({ path: new URL("../.env", import.meta.url).pathname });
 const router = express.Router();
 
 const pool = mysql.createPool({
@@ -62,7 +63,6 @@ router.get("/list", async (req, res) => {
     params.push(limit, offset);
 
     const [rows] = await pool.query(query, params);
-
     const now = Date.now();
 
     const data = await Promise.all(
@@ -148,18 +148,6 @@ router.get("/history/:uuid", async (req, res) => {
   }
 });
 
-// Proxy CreeperNation API to bypass CORS
-router.get("/bedrock-name/:uuid", async (req, res) => {
-  try {
-    const uuid = req.params.uuid;
-    const response = await fetch(`https://api.creepernation.net/v1/player/${uuid}`);
-    const data = await response.json();
-    res.json(data);
-  } catch (err) {
-    res.status(500).json({ error: "Failed to resolve Bedrock name" });
-  }
-});
-
 // GET /api/bans/counts
 router.get("/counts", async (req, res) => {
   try {
@@ -170,6 +158,24 @@ router.get("/counts", async (req, res) => {
     res.json({ bans, mutes, kicks });
   } catch (err) {
     console.error("❌ Count fetch error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ✅ Discord link status check
+router.get("/api/discord/check-link", requireAuth, async (req, res) => {
+  try {
+    const linked = !!req.user?.discordId;
+
+    res
+      .status(200)
+      .set("Cache-Control", "no-store, no-cache, must-revalidate")
+      .set("Pragma", "no-cache")
+      .set("Expires", "0")
+      .set("Content-Type", "application/json")
+      .json({ linked });
+  } catch (err) {
+    console.error("❌ Discord check error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });

@@ -1,17 +1,22 @@
 import express from "express";
 import cors from "cors";
-import mysql from "mysql2/promise";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import nodemailer from "nodemailer";
 import randomstring from "randomstring";
 import dotenv from "dotenv";
 import fetch from "node-fetch";
-import blogRoutes from "./routes/blog.js";
-import bansRoutes from "./routes/bans.js";
-import authenticateToken from "./middleware/authMiddleware.js";
 import path from "path";
 import { fileURLToPath } from "url";
+import rateLimiter from "./utils/rateLimiter.js";
+import discordRoutes from "./bot.js";
+
+import db from "./utils/db.js"; // ✅ shared DB pool
+import blogRoutes from "./routes/blog.js";
+import bansRoutes from "./routes/bans.js";
+import appealsRoutes from "./routes/appeals.js";
+import authenticateToken from "./middleware/authMiddleware.js";
+import "./bot.js";
 
 dotenv.config();
 
@@ -31,17 +36,11 @@ app.use(cors());
 app.use(express.json());
 app.use("/api/blog", blogRoutes);
 app.use("/api/bans", bansRoutes);
+app.use("/api/appeals", appealsRoutes);
+app.use("/api", discordRoutes);
 app.use(express.static(FRONTEND_BUILD_PATH));
 
-// ✅ MySQL Connection
-const db = mysql.createPool({
-  host: process.env.DB_HOST,
-  port: 3306,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASS,
-  database: process.env.DB_NAME,
-});
-
+// ✅ Verify DB Connection
 db.getConnection()
   .then(() => console.log("✅ Connected to MySQL Database"))
   .catch((err) => {
@@ -75,17 +74,33 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+// ✅ UUID dash utility
+function insertUuidDashes(uuid) {
+  if (!uuid || uuid.length !== 32) return uuid;
+  return uuid.replace(/^(.{8})(.{4})(.{4})(.{4})(.{12})$/, "$1-$2-$3-$4-$5");
+}
+
 // ✅ Mojang UUID Fetcher
 async function getMinecraftUUID(username) {
   const response = await fetch(`https://api.mojang.com/users/profiles/minecraft/${username}`);
   if (!response.ok) return null;
   const data = await response.json();
-  return data.id;
+  return insertUuidDashes(data.id);
 }
 
 // ✅ API Status Check
 app.get("/api/status", (req, res) => {
   res.json({ message: "Torrent Network API is running!" });
+});
+
+// 🔹 Uptime / Metrics Ping
+app.get("/api/metrics", (req, res) => {
+  res.json({
+    status: "ok",
+    timestamp: new Date(),
+    backend: process.env.BACKEND_URL,
+    frontend: process.env.FRONTEND_URL,
+  });
 });
 
 const router = express.Router();
@@ -145,10 +160,7 @@ router.post("/auth/resend-verification", async (req, res) => {
       return res.status(400).json({ error: "Email already verified." });
 
     const newToken = randomstring.generate(32);
-    await db.query("UPDATE users SET verification_token = ? WHERE email = ?", [
-      newToken,
-      email,
-    ]);
+    await db.query("UPDATE users SET verification_token = ? WHERE email = ?", [newToken, email]);
 
     const verificationLink = `${BACKEND_URL}/auth/verify-email?token=${newToken}`;
 
@@ -172,21 +184,17 @@ router.get("/auth/verify-email", async (req, res) => {
   if (!token) return res.status(400).json({ error: "Missing token." });
 
   try {
-    const [user] = await db.query(
-      "SELECT * FROM users WHERE verification_token = ?",
-      [token]
-    );
-    if (!user.length)
-      return res.status(404).json({ error: "Invalid or expired token." });
+    const [user] = await db.query("SELECT * FROM users WHERE verification_token = ?", [token]);
+    if (!user.length) return res.status(404).json({ error: "Invalid or expired token." });
 
     const player = user[0];
-    await db.query(
-      "UPDATE users SET email_verified = 1, verification_token = NULL WHERE uuid = ?",
-      [player.uuid]
-    );
+    await db.query("UPDATE users SET email_verified = 1, verification_token = NULL WHERE uuid = ?", [player.uuid]);
 
     const jwtToken = jwt.sign(
-      { uuid: player.uuid, username: player.username },
+      {
+        uuid: insertUuidDashes(player.uuid),
+        username: player.username,
+      },
       JWT_SECRET,
       { expiresIn: "7d" }
     );
@@ -198,16 +206,14 @@ router.get("/auth/verify-email", async (req, res) => {
   }
 });
 
-// 🔹 Login
-router.post("/auth/login", async (req, res) => {
+// 🔹 Login with rate limiter
+router.post("/auth/login", rateLimiter(1, 5, "Too many login attempts. Try again soon."), async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password)
     return res.status(400).json({ error: "Missing credentials." });
 
   try {
-    const [users] = await db.query("SELECT * FROM users WHERE username = ?", [
-      username,
-    ]);
+    const [users] = await db.query("SELECT * FROM users WHERE username = ?", [username]);
     if (!users.length)
       return res.status(401).json({ error: "Invalid username or password." });
 
@@ -220,21 +226,22 @@ router.post("/auth/login", async (req, res) => {
       return res.status(401).json({ error: "Invalid username or password." });
 
     const token = jwt.sign(
-      { uuid: user.uuid, username: user.username },
+      {
+        uuid: insertUuidDashes(user.uuid),
+        username: user.username,
+      },
       JWT_SECRET,
       { expiresIn: "7d" }
     );
 
-    await db.query("UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE uuid = ?", [
-      user.uuid,
-    ]);
+    await db.query("UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE uuid = ?", [user.uuid]);
 
     res.json({
       message: "Login successful!",
       token,
       user: {
         username: user.username,
-        uuid: user.uuid,
+        uuid: insertUuidDashes(user.uuid),
       },
     });
   } catch (err) {
@@ -243,7 +250,7 @@ router.post("/auth/login", async (req, res) => {
   }
 });
 
-// 🔹 Forgot Password - Request Reset Link
+// 🔹 Forgot Password
 router.post("/auth/forgot-password", async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: "Email is required." });
@@ -253,10 +260,8 @@ router.post("/auth/forgot-password", async (req, res) => {
     if (!users.length) return res.status(404).json({ error: "User not found." });
 
     const user = users[0];
-
-    // Generate a one-time reset token
     const resetToken = randomstring.generate(32);
-    const expiresAt = new Date(Date.now() + 1000 * 60 * 30); // 30 mins
+    const expiresAt = new Date(Date.now() + 1000 * 60 * 30);
 
     await db.query(
       "UPDATE users SET reset_token = ?, reset_expires = ? WHERE email = ?",
@@ -314,31 +319,12 @@ router.get("/protected", authenticateToken, (req, res) => {
 
 app.use(router);
 
-// 🔹 Discord Preview
-router.get("/discord/preview", async (req, res) => {
-  try {
-    const response = await fetch("https://discord.com/api/guilds/1083850845596172339/preview", {
-      headers: {
-        Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}`,
-      },
-    });
-    const data = await response.json();
-    if (data.code === 0 && data.message?.includes("Unauthorized")) {
-      throw new Error("Discord unauthorized — check bot token or guild settings.");
-    }
-    res.json(data);
-  } catch (err) {
-    console.error("❌ Discord preview fetch failed:", err);
-    res.status(500).json({ error: "Failed to fetch Discord preview." });
-  }
-});
-
 // 🔹 Root API
 app.get("/api", (req, res) => {
   res.json({ message: "Torrent Network API is running!" });
 });
 
-// ✅ Production fallback for React routes (e.g. /blog/:slug)
+// ✅ Production fallback for React routes
 app.get("*", (req, res) => {
   res.sendFile(path.join(FRONTEND_BUILD_PATH, "index.html"));
 });

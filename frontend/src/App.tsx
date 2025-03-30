@@ -23,6 +23,8 @@ import Affiliates from "./pages/Affiliates";
 import BansPage from "./pages/Bans";
 import BansListPage from "./pages/BansList";
 import PlayerPunishments from "./pages/PlayerPunishments";
+import MyAppealsPage from "./pages/MyAppealsPage";
+import AppealFormPage from "./pages/AppealFormPage";
 import { JSX } from "react"; // ✅ Prevents JSX errors
 
 // Protected Route Wrapper
@@ -57,6 +59,8 @@ function App() {
           <Route path="/bans" element={<BansPage />} />
           <Route path="/bans/list" element={<BansListPage />} />
           <Route path="/bans/:uuid" element={<PlayerPunishments />} />
+          <Route path="/appeals/my" element={<MyAppealsPage />} />
+          <Route path="/appeals/:type" element={<AppealFormPage />} />
         </Routes>
       </Router>
     </AuthProvider>

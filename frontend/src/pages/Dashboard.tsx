@@ -72,10 +72,13 @@ const Dashboard = () => {
         </div>
 
         {/* Token Display */}
-        <div className="pt-4 border-t border-gray-700">
-          <p className="text-sm text-gray-400">
-            Your token: <code className="text-green-400">{user?.token}</code>
-          </p>
+        <div className="pt-6 border-t border-gray-700 text-center">
+          <a
+            href="/appeals/my"
+            className="inline-block bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-500 transition"
+          >
+            View My Appeals
+          </a>
         </div>
       </div>
     </PageLayout>

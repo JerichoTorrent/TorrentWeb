@@ -1,3 +1,5 @@
+![Lines of Code](https://raw.githubusercontent.com/JerichoTorrent/TorrentWeb/badges/badge.svg)
+
 # 🌩️ Torrent Network Website Template
 
 This is a full-stack React + TypeScript template for Minecraft server websites with user login, blog, voting, account dashboard, and more. Originally designed for the Torrent Network, it's now available for anyone to fork and adapt.
@@ -13,6 +15,8 @@ This is a full-stack React + TypeScript template for Minecraft server websites w
 - User dashboard (protected)
 - Dynamic header with online player + Discord info
 - Fully responsive dark UI with particle effects
+- Dynamic ban system and complete integration with Litebans; much cleaner and more responsive than Litebans-next or Litebans-php
+- The most thorough and secure ban appeal system that exists
 
 ---
 
@@ -40,6 +44,11 @@ cd TorrentWeb
 - MySQL or another Database server
 - A brain
 - A code editor of your choice (VSCode, Intellij, etc.)
+- Litebans with MySQL storage option
+- Bluemap or another live map reverse proxy application
+- Cloudflare R2 bucket for sandboxed storage; trust me this is important for content moderation. You don't frontend uploaded files on your server.
+- A discord bot; save your token
+- OpenAI API key (Content Moderation API calls are free!)
 Once you have the project cloned and are `cd`ed into the project files, run `npm install` and theoretically you're good to go, but if I screwed up the package.json then you're on your own with this one.
 
 ### 3. Environment Variables  
@@ -47,9 +56,9 @@ Once you have the project cloned and are `cd`ed into the project files, run `npm
 Create a file in root called `.env` and edit it. Input the following:
 
 ```
-# Server config
+# Server config, I know this doesn't make sense but the port is necessary for anything backend related so just bear with me
 PORT=3000
-FRONTEND_URL=http://localhost:5173
+FRONTEND_URL=
 
 # MySQL config
 DB_HOST=
@@ -71,7 +80,28 @@ EMAIL_SENDAS=
 
 BACKEND_URL=http://localhost:3000
 
+#Discord
+DISCORD_GUILD_ID=
 DISCORD_BOT_TOKEN=
+DISCORD_CHANNEL_ID=
+DISCORD_MUTED_ROLE=
+
+# Litebans DB config
+LITEBANS_DB_HOST=
+LITEBANS_DB_PORT=
+LITEBANS_DB_NAME=
+LITEBANS_DB_USER=
+LITEBANS_DB_PASS=
+
+# OpenAI Moderation
+OPENAI_API_KEY=
+
+# Cloudflare R2
+R2_ACCESS_KEY_ID=
+R2_SECRET_ACCESS_KEY=
+R2_ENDPOINT=
+R2_BUCKET=
+R2_PUBLIC_URL=
 ```
 So as you can see from the above, there's a bit of configuring to do. You will need to:
 - Create a database (explained later)
@@ -90,7 +120,7 @@ CREATE TABLE users (
     password_hash VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_login TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
-    session_token VARCHAR(255) NULL;
+    session_token VARCHAR(255) NULL
 );
 CREATE TABLE bans (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -131,6 +161,21 @@ CREATE TABLE blog_reactions (
   type ENUM('like', 'love', 'fire', 'laugh', 'wow'), -- emoji set
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE appeals (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  uuid VARCHAR(36) NOT NULL,
+  username VARCHAR(32) NOT NULL,
+  discord_id VARCHAR(32), -- nullable if not linked
+  type ENUM('minecraft-ban', 'minecraft-mute', 'discord') NOT NULL,
+  message TEXT NOT NULL,
+  files JSON, -- array of uploaded file URLs
+  status ENUM('pending', 'accepted', 'denied', 'modified') DEFAULT 'pending',
+  verdict_message TEXT, -- optional staff message
+  decided_by VARCHAR(32), -- username or staff ID
+  decided_at DATETIME,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
 ```
 
 ### 4. Local Deployment  
@@ -154,7 +199,7 @@ Obviously as it is now, it's quite unfinished and even when it is finished, you 
 
 ### Credits  
 
-If you use this template, please include the link to my site in the footer (that I will code.. eventually). This is the only credit I'm asking for.  
+If you use this template, please include the link to my site in the footer from our digital marketing partner. This is the only credit I'm asking for.  
 Website: <https://torrentsmp.com>  
 Discord: <https://discord.gg/torrent>  
 Server IP: torrentsmp.com  
