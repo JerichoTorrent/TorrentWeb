@@ -24,8 +24,8 @@ jobs:
         with:
           directory: ./
           badge: badge.svg
-          patterns: '*.ts|*.tsx|*.js'
-          ignore: 'node_modules|dist|build'
+          patterns: '**/*.ts|**/*.tsx|**/*.js'
+          ignore: 'node_modules|dist|build|public|.github|.vscode'
 
       - name: Commit and Push badge to badges branch
         env:
@@ -34,10 +34,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          # Save badge temporarily
           mv badge.svg /tmp/badge.svg
 
-          # Checkout badges branch or create it cleanly
           if git ls-remote --exit-code --heads origin badges; then
             git checkout badges
           else
@@ -45,10 +43,8 @@ jobs:
             git rm -rf . || true
           fi
 
-          # Move badge back into the repo and commit
           mv /tmp/badge.svg badge.svg
           git add badge.svg
           git commit -m "Update LoC badge" || echo "No changes to commit"
 
-          # Push using GITHUB_TOKEN
           git push -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git" badges
