@@ -5,6 +5,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   loc-badge:
     runs-on: ubuntu-latest
@@ -14,6 +17,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Make Code Badge
         uses: shadowmoose/GHA-LoC-Badge@1.0.0
@@ -24,23 +28,27 @@ jobs:
           ignore: 'node_modules|dist|build'
 
       - name: Commit and Push badge to badges branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          # Save the badge temporarily
+          # Save badge temporarily
           mv badge.svg /tmp/badge.svg
 
-          # Check if badges branch exists and checkout/create it
+          # Checkout badges branch or create it cleanly
           if git ls-remote --exit-code --heads origin badges; then
             git checkout badges
           else
             git checkout --orphan badges
-            git rm -rf .
+            git rm -rf . || true
           fi
 
-          # Move badge back into the repo and commit it
+          # Move badge back into the repo and commit
           mv /tmp/badge.svg badge.svg
           git add badge.svg
           git commit -m "Update LoC badge" || echo "No changes to commit"
-          git push -f origin badges
+
+          # Push using GITHUB_TOKEN
+          git push -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git" badges
