@@ -13,7 +13,7 @@ const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildBans
+    GatewayIntentBits.GuildModeration
   ]
 });
 
@@ -39,7 +39,8 @@ async function sendAppealPanel({ id, type, username, message, files, uuid }) {
       .setTitle(`📝 ${type.replace("-", " ").toUpperCase()} Appeal`)
       .setDescription(`**User:** ${username}\n**UUID:** ${uuid}\n\n**Message:**\n${message}`)
       .setColor(0x9b59b6)
-      .setTimestamp();
+      .setTimestamp()
+      .setFooter({ text: `Appeal ID: ${id}` });
 
     files.forEach((url, i) => {
       embed.addFields({

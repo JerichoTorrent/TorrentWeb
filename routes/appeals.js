@@ -30,6 +30,7 @@ const litebans = mysql.createPool({
   connectionLimit: 10,
 });
 
+// --- Check eligibility ---
 router.use("/check-eligibility", (req, res, next) => {
   res.set("Cache-Control", "no-store");
   res.set("Content-Type", "application/json");
@@ -39,8 +40,6 @@ router.use("/check-eligibility", (req, res, next) => {
 router.get("/check-eligibility", requireAuth, async (req, res) => {
   const { type } = req.query;
   const user = req.user;
-
-  console.log("✅ [Appeals] Checking eligibility for:", type, "User:", user?.uuid, "Discord ID:", user.discordId);
 
   if (!VALID_TYPES.includes(type)) {
     return res.status(400).json({ error: "Invalid appeal type." });
@@ -55,37 +54,26 @@ router.get("/check-eligibility", requireAuth, async (req, res) => {
     if (rows.length > 0) {
       const last = new Date(rows[0].created_at);
       const now = new Date();
-      const secondsRemaining = Math.max(
-        0,
-        2592000 - Math.floor((now.getTime() - last.getTime()) / 1000)
-      );
+      const secondsRemaining = Math.max(0, 2592000 - Math.floor((now - last) / 1000));
       return res.status(200).json({ eligible: false, cooldown: secondsRemaining });
     }
 
-    const hasActivePunishment = await checkActivePunishment(user.uuid, user.username, type, user.discordId);
-    return res.status(200).json({ eligible: hasActivePunishment });
+    const eligible = await checkActivePunishment(user.uuid, user.username, type, user.discordId);
+    return res.status(200).json({ eligible });
   } catch (err) {
     console.error("❌ [Appeals] Eligibility check failed:", err);
-    return res.status(500).json({ error: "Failed to check eligibility." });
+    res.status(500).json({ error: "Failed to check eligibility." });
   }
 });
 
-// --- Active punishment checker ---
+// --- Check active punishments ---
 async function checkActivePunishment(uuid, username, type, discordId = null) {
-  console.log("🔍 Checking active punishment for UUID:", uuid, "Type:", type, "Discord ID:", discordId);
-
   if (type === "discord") {
-    if (!discordId) {
-      console.warn("⚠ No Discord ID provided.");
-      return false;
-    }
-
+    if (!discordId) return false;
     try {
       const result = await checkDiscordPunishment(discordId);
-      console.log("✅ Discord punishment result:", result);
       return result?.active === true;
-    } catch (err) {
-      console.error("❌ Discord punishment check error:", err);
+    } catch {
       return false;
     }
   }
@@ -93,44 +81,26 @@ async function checkActivePunishment(uuid, username, type, discordId = null) {
   const table = type === "minecraft-ban" ? "litebans_bans" : "litebans_mutes";
 
   try {
-    const [uuidRows] = await litebans.query(
+    const [uuidMatch] = await litebans.query(
       `SELECT 1 FROM ${table} WHERE uuid = ? AND active = 1 LIMIT 1`,
       [uuid]
     );
-
-    if (uuidRows.length > 0) {
-      console.log("✅ Active punishment found via UUID");
-      return true;
-    }
+    if (uuidMatch.length) return true;
 
     const [history] = await litebans.query(
       `SELECT name FROM litebans_history WHERE uuid = ? ORDER BY date DESC LIMIT 1`,
       [uuid]
     );
+    if (!history[0]?.name) return false;
 
-    const name = history[0]?.name;
-    if (!name) {
-      console.warn("⚠ No player name found in history for UUID:", uuid);
-      return false;
-    }
-
-    const [offlineRows] = await litebans.query(
-      `SELECT 1 FROM ${table} WHERE uuid = '#offline#' AND active = 1 LIMIT 1`,
+    const [offlineMatch] = await litebans.query(
+      `SELECT 1 FROM ${table} WHERE uuid = '#offline#' AND active = 1 LIMIT 1`
     );
-
-    if (offlineRows.length > 0) {
-      console.log("✅ Active punishment found via fallback (#offline#)");
-      return true;
-    }
-
-    console.log("❌ No active punishment found.");
-    return false;
-  } catch (err) {
-    console.error(`❌ Failed to query ${table}:`, err);
+    return offlineMatch.length > 0;
+  } catch {
     return false;
   }
 }
-
 
 // --- Submit appeal ---
 router.post(
@@ -155,24 +125,18 @@ router.post(
       return res.status(429).json({ error: "You can only submit one appeal per type per month." });
     }
 
-    const moderation = await openai.moderations.create({
-      model: "text-moderation-latest",
-      input: message
-    });
-
-    if (moderation.results[0]?.flagged) {
-      return res.status(403).json({ error: "Appeal message flagged by moderation." });
-    }
-
-    const fileLinks = [];
+    // Validate file count
     if (req.files.length > 5) {
       return res.status(400).json({ error: "You can only upload up to 5 files." });
     }
 
+    const inputs = [{ type: "text", text: message }];
+    const fileLinks = [];
+
     for (const file of req.files) {
       const ext = file.originalname.split(".").pop()?.toLowerCase();
       const sizeLimit = 10 * 1024 * 1024;
-
+    
       if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
         return res.status(400).json({ error: `Unsupported file type: ${file.originalname}` });
       }
@@ -182,29 +146,52 @@ router.post(
       if (file.size > sizeLimit) {
         return res.status(400).json({ error: `File too large: ${file.originalname}` });
       }
-
-      try {
-        await scanBufferWithClamAV(file.buffer, file.originalname);
-      } catch (err) {
-        console.error("❌ Virus scan failed:", err.message);
-        return res.status(400).json({ error: `File "${file.originalname}" failed virus scan.` });
+    
+      // 🧼 Only scan non-image files for viruses
+      if (!file.mimetype.startsWith("image/")) {
+        try {
+          await scanBufferWithClamAV(file.buffer, file.originalname);
+        } catch (err) {
+          return res.status(400).json({ error: `File "${file.originalname}" failed virus scan.` });
+        }
       }
-
-      const inputText = file.mimetype.includes("document")
-        ? await extractTextFromDocx(file.buffer)
-        : file.buffer.toString("base64");
-
-      const modResult = await openai.moderations.create({
-        model: "text-moderation-latest",
-        input: inputText
-      });
-
-      if (modResult.results[0]?.flagged) {
-        return res.status(403).json({ error: `File "${file.originalname}" was flagged by moderation.` });
+    
+      if (file.mimetype === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+        const text = await extractTextFromDocx(file.buffer);
+        inputs.push({ type: "text", text });
+      } else if (file.mimetype.startsWith("image/")) {
+        const fileUrl = await R2Upload(file);
+        inputs.push({
+          type: "image_url",
+          image_url: { url: fileUrl }
+        });
+        fileLinks.push(fileUrl);
+        continue;
       }
-
+    
       const fileUrl = await R2Upload(file);
       fileLinks.push(fileUrl);
+    }    
+
+    // --- Run OpenAI moderation (only block if category "sexual" is true)
+    try {
+      const moderation = await openai.moderations.create({
+        model: "omni-moderation-latest",
+        input: inputs
+      });
+
+      const result = moderation.results[0];
+      console.log("🔍 Moderation result:", JSON.stringify(result, null, 2));
+
+      const isSexual = result.categories?.sexual === true;
+      if (isSexual) {
+        return res.status(403).json({
+          error: "Your appeal was flagged for containing sexual content. Please revise and try again."
+        });
+      }
+    } catch (err) {
+      console.error("❌ OpenAI moderation error:", err);
+      return res.status(500).json({ error: "Failed to moderate content. Please try again later." });
     }
 
     const [result] = await db.query(
@@ -233,19 +220,32 @@ router.post(
   }
 );
 
-// --- Get current user's appeals ---
+// --- View current user's appeals ---
 router.get("/my", requireAuth, async (req, res) => {
   try {
+    console.log("👤 Fetching appeals for UUID:", req.user.uuid);
     const [rows] = await db.query(
       "SELECT * FROM appeals WHERE uuid = ? ORDER BY created_at DESC",
       [req.user.uuid]
     );
+    console.log("📦 Appeals returned:", rows.length);
+    if (rows.length === 0) {
+      const [debug] = await db.query("SELECT uuid FROM appeals");
+      console.log("📋 All UUIDs in appeals table:", debug.map(r => r.uuid));
+    }
 
     const formatted = rows.map((appeal) => ({
       id: appeal.id,
       type: appeal.type,
       message: appeal.message,
-      files: appeal.files ? JSON.parse(appeal.files) : [],
+      files: (() => {
+        try {
+          const parsed = JSON.parse(appeal.files);
+          return Array.isArray(parsed) ? parsed : [parsed];
+        } catch {
+          return appeal.files ? [appeal.files] : [];
+        }
+      })(),
       status: appeal.status || "pending",
       verdict_message: appeal.verdict_message || null,
       decided_at: appeal.decided_at || null,

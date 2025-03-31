@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import PageLayout from "../components/PageLayout";
+import AuthContext from "../context/AuthContext";
 
 type Appeal = {
   id: number;
@@ -15,16 +16,25 @@ type Appeal = {
 const MyAppealsPage = () => {
   const [appeals, setAppeals] = useState<Appeal[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useContext(AuthContext);
 
   useEffect(() => {
-    fetch("/api/appeals/my", { credentials: "include" })
+    if (!user?.token) return;
+
+    fetch("/api/appeals/my", {
+      headers: {
+        Authorization: `Bearer ${user.token}`
+      },
+      cache: "no-store"
+    })
       .then(res => res.json())
       .then(data => {
+        console.log("My appeals response:", data);
         setAppeals(data.appeals || []);
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, []);
+  }, [user]);
 
   const statusColor = {
     pending: "text-yellow-400",
@@ -53,8 +63,8 @@ const MyAppealsPage = () => {
                   <h2 className="text-lg font-semibold text-purple-300 capitalize">
                     {appeal.type.replace("-", " ")} Appeal
                   </h2>
-                  <span className={`text-sm font-semibold ${statusColor[appeal.status]}`}>
-                    {appeal.status.toUpperCase()}
+                  <span className={`text-sm font-semibold ${statusColor[appeal.status || "pending"]}`}>
+                    {(appeal.status || "pending").toUpperCase()}
                   </span>
                 </div>
                 <p className="text-sm text-gray-300 mb-3">
