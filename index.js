@@ -21,6 +21,7 @@ import "./bot.js";
 dotenv.config();
 
 const app = express();
+app.set("trust proxy", 1); // ✅ Trust Cloudflare's IP forwarding
 const PORT = process.env.PORT || 3000;
 const BACKEND_URL = process.env.BACKEND_URL;
 
