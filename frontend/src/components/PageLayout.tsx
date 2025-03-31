@@ -13,13 +13,9 @@ const PageLayout: React.FC<PageLayoutProps> = ({ children, fullWidth = false }) 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0e0e10] to-[#1a1a1e] text-white flex flex-col">
       {/* Header/Navbar layout */}
-      <div className="block sm:hidden">
+      <div className="flex flex-col sm:flex-col-reverse">
         <Navbar />
         <Header />
-      </div>
-      <div className="hidden sm:block">
-        <Header />
-        <Navbar />
       </div>
 
       {/* Shared container — allow override */}

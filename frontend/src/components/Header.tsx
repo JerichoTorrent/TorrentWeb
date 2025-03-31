@@ -20,7 +20,7 @@ const Header = () => {
   const [minecraftPlayers, setMinecraftPlayers] = useState<number | null>(null);
 
   useEffect(() => {
-    fetch(`${BASE_URL}/discord/preview`)
+    fetch(`${BASE_URL}/api/discord/preview`)
       .then((res) => res.json())
       .then((data) => setDiscordMembers(data?.approximate_member_count ?? null))
       .catch(() => setDiscordMembers(null));
@@ -62,7 +62,14 @@ const Header = () => {
   };
 
   return (
-    <div className="relative z-50 border-b border-[#2d2d34] shadow-[0_2px_10px_rgba(0,0,0,0.6)]">
+    <div className="relative z-50 min-h-[20rem] border-b border-[#2d2d34] shadow-[0_2px_10px_rgba(0,0,0,0.6)]">
+      {/* Background Layers */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+        <ParticleBackground />
+        <img src="/sheep_corp.png" alt="Header Background" className="w-full h-full object-cover" />
+        <div className="absolute inset-0 bg-[#1f1f1f]/50 backdrop-blur-sm" />
+      </div>
+
       <div className="relative z-10 px-6 pt-4 pb-4 text-white flex flex-col items-center">
         {/* Login/Profile Row */}
         <div className="w-full justify-end hidden sm:flex">
@@ -131,6 +138,7 @@ const Header = () => {
             </div>
           )}
         </div>
+
         {/* Logo + Buttons */}
         <div className="relative w-full max-w-5xl mt-4 mb-6 flex flex-col sm:flex-row sm:justify-center sm:items-center gap-6 sm:gap-0">
           {/* Left - Discord */}
@@ -176,13 +184,6 @@ const Header = () => {
             </span>
           </div>
         </div>
-      </div>
-
-      {/* Background Layers */}
-      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-        <img src="/sheep_corp.png" alt="Header Background" className="w-full h-full object-cover" />
-        <ParticleBackground />
-        <div className="absolute inset-0 bg-[#1f1f1f]/50 backdrop-blur-sm" />
       </div>
     </div>
   );

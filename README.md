@@ -7,16 +7,19 @@ This is a full-stack React + TypeScript template for Minecraft server websites w
 
 ## 🚀 Features  
 
-- Minecraft username + password login (JWT-based)
-- Email verification and auto-login flow using Brevo or another mailer of your choice
-- Register, login, forgot password pages
-- Blog with pagination and post rendering
-- Vote page
-- User dashboard (protected)
-- Dynamic header with online player + Discord info
-- Fully responsive dark UI with particle effects
-- Dynamic ban system and complete integration with Litebans; much cleaner and more responsive than Litebans-next or Litebans-php
-- The most thorough and secure ban appeal system that exists
+- Minecraft username + password login system (JWT-based)
+- Email verification with automatic login (via Brevo or other SMTP providers)
+- Responsive dark theme with particle effects
+- Blog system with Markdown post support, comments, and reactions
+- Ban, mute, and kick listings with appeal buttons; much cleaner and more responsive that Litebans-next or Litebans-php
+- Full-featured appeal system supporting:
+  - Minecraft bans and mutes (Litebans)
+  - Discord punishments (via Discord bot)
+  - File uploads (docx, png, jpg) to Cloudflare R2
+- Discord authentication and account linking
+- IP-based rate limiting (Express)
+- Live server status + Discord info in header
+- Full dashboard with player info (XP, profile, tokens coming soon)
 
 ---
 
@@ -25,6 +28,7 @@ This is a full-stack React + TypeScript template for Minecraft server websites w
 - **Frontend**: React + TypeScript + TailwindCSS
 - **Backend**: Node.js + Express + MySQL (not included in this repo)
 - **Authentication**: JWT + Email magic link verification
+- **Storage**: Cloudflare R2 (for uploaded files)
 - **Deployment-ready**: Vite + `.env` support
 
 ---
@@ -40,14 +44,14 @@ cd TorrentWeb
 
 ### 2. Dependencies
 
-- Node.js
+- Node.js & npm
 - MySQL or another Database server
 - A brain
 - A code editor of your choice (VSCode, Intellij, etc.)
 - Litebans with MySQL storage option
 - Bluemap or another live map reverse proxy application
 - Cloudflare R2 bucket for sandboxed storage; trust me this is important for content moderation. You don't frontend uploaded files on your server.
-- A discord bot; save your token
+- A [Discord bot](https://discord.com/developers/applications)
 - OpenAI API key (Content Moderation API calls are free!)
 Once you have the project cloned and are `cd`ed into the project files, run `npm install` and theoretically you're good to go, but if I screwed up the package.json then you're on your own with this one.
 
@@ -56,7 +60,7 @@ Once you have the project cloned and are `cd`ed into the project files, run `npm
 Create a file in root called `.env` and edit it. Input the following:
 
 ```
-# Server config, I know this doesn't make sense but the port is necessary for anything backend related so just bear with me
+# Server config. Port is usually the default React/node.js port and the frontend URL is *usually* the same as your backend.
 PORT=3000
 FRONTEND_URL=
 
@@ -74,17 +78,21 @@ JWT_SECRET=
 
 EMAIL_USER=
 EMAIL_PASS=
-EMAIL_HOST=
-EMAIL_PORT=
+EMAIL_HOST=smtp-relay.brevo.com
+EMAIL_PORT=587
 EMAIL_SENDAS=
 
-BACKEND_URL=http://localhost:3000
+# Backend URL needs to be https for CORS to work on strict browsers
+BACKEND_URL=
 
-#Discord
+# Discord
 DISCORD_GUILD_ID=
 DISCORD_BOT_TOKEN=
 DISCORD_CHANNEL_ID=
 DISCORD_MUTED_ROLE=
+DISCORD_CLIENT_ID=
+DISCORD_CLIENT_SECRET=
+DISCORD_REDIRECT_URI=
 
 # Litebans DB config
 LITEBANS_DB_HOST=
@@ -96,19 +104,30 @@ LITEBANS_DB_PASS=
 # OpenAI Moderation
 OPENAI_API_KEY=
 
-# Cloudflare R2
+# Cloudflare R2 | Cloudflare Dashboard -> R2 Object Storage
 R2_ACCESS_KEY_ID=
 R2_SECRET_ACCESS_KEY=
 R2_ENDPOINT=
 R2_BUCKET=
 R2_PUBLIC_URL=
 ```
+
+Create ANOTHER .env in /frontend:
+```
+VITE_API_BASE_URL=
+VITE_MCSTATUS_URL=
+VITE_DISCORD_URL=
+VITE_DISCORD_CLIENT_ID=
+VITE_DISCORD_REDIRECT_URI=
+```
 So as you can see from the above, there's a bit of configuring to do. You will need to:
 - Create a database (explained later)
-- Generate a JWT secret key. That's easy, just run `node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"` and copy the output
+- Generate a JWT secret key. That's easy, just run the command `node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"` and copy the output
 - Create Brevo account, add a verified email, then copy your SMTP settings.
-- Create a [Discord bot](https://discord.com/developers/applications) and copy the bot token. This is required for the Discord preview in the header.
-The port is your server's backend port. There are files that rely on it so just leave it as 3000 if you're running on React's default port. You have to create a database server as a lot of things use the database, so read MySQL's docs or use ChatGPT. Run the following commands in your MySQL server:
+- Create a [Discord bot](https://discord.com/developers/applications) and give it necessary permissions. This is required for the Discord preview in the header as well as the appeal system. All the logic is in bot.js, which is intended to run alongside your web app. Invite it to your server.
+- Create an R2 storage bucket. Be smart and turn on Cloudflare CSAM monitoring as well.
+
+Run the following commands in your MySQL server:
 ```
 CREATE DATABASE <database_name>;
 USE <database_name>;
@@ -121,14 +140,6 @@ CREATE TABLE users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_login TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
     session_token VARCHAR(255) NULL
-);
-CREATE TABLE bans (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    reason TEXT NOT NULL,
-    banned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    expires_at TIMESTAMP NULL,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 CREATE TABLE votes (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -178,9 +189,11 @@ CREATE TABLE appeals (
 );
 ```
 
-### 4. Local Deployment  
+### 4. Deployment  
 
-To deploy this project locally just do `npm run dev` in the frontend folder, then `node index.js` in the backend (root). Then your backend will be accessible at `localhost:3000` and frontend on `localhost:5173`. However, the blog functionality does not work if the user is only exposed to the frontend. So, best practice, just push straight to prod, `npm run build` (in the frontend folder), then `node index.js` in the backend (root).
+1. Run `npm run build` in `/frontend`
+2. Your Express server will serve the static frontend from `/frontend/dist`
+3. Use a [Cloudflare Zero Trust](https://developers.cloudflare.com/cloudflare-one/) tunnel to expose both frontend + backend.
 
 ### 5. Adding New Pages  
 
@@ -195,6 +208,7 @@ Obviously as it is now, it's quite unfinished and even when it is finished, you 
 - The styling uses tailwind
 - Blog.tsx is the page you see when you go to /blog, while BlogPost.tsx controls the styling of the markdown files you put in /frontend/src/content/blog
 - If you use Bluemap, Dynmap, etc. just change the link in Map.tsx to your own
+- Uploaded files are scanned by ClamAV and moderated via OpenAI before being saved
 - Don't hate on my code. It worked on my machine.
 
 ### Credits  
