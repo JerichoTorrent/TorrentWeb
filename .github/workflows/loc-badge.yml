@@ -2,8 +2,8 @@ name: Generate LoC Badge
 
 on:
   push:
-    branches: [main]  # or your default branch
-  workflow_dispatch:  # allows manual trigger
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
   loc-badge:
@@ -11,7 +11,7 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Make Code Badge
         uses: shadowmoose/GHA-LoC-Badge@1.0.0
