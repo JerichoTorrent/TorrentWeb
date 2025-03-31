@@ -12,24 +12,36 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Ensures all branches are fetched
 
       - name: Make Code Badge
         uses: shadowmoose/GHA-LoC-Badge@1.0.0
-        id: badge
         with:
-          debug: true
           directory: ./
           badge: ./badge.svg
           patterns: '*.ts|*.tsx|*.js'
           ignore: 'node_modules|dist|build'
 
-      - name: Upload Badge to badges branch
+      - name: Commit Badge to badges branch
         run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "github-actions@github.com"
-          git checkout --orphan badges
-          git reset
-          mv badge.svg ./badge.svg
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          
+          # Switch or create the badges branch
+          if git show-ref --quiet refs/heads/badges; then
+            git checkout badges
+          else
+            git checkout --orphan badges
+          fi
+
+          # Reset branch content
+          git rm -rf . || true
+
+          # Move badge.svg into the clean branch
+          git checkout main -- badge.svg
+
+          # Commit and push
           git add badge.svg
-          git commit -m "Update LoC badge"
+          git commit -m "Update LoC badge" || echo "No changes to commit"
           git push -f origin badges
