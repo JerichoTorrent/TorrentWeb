@@ -3,6 +3,7 @@ import Header from "./Header";
 import Navbar from "./Navbar";
 import Breadcrumbs from "./Breadcrumbs";
 import Footer from "./Footer";
+import { useLocation } from "react-router-dom";
 
 interface PageLayoutProps {
   children: React.ReactNode;
@@ -10,6 +11,8 @@ interface PageLayoutProps {
 }
 
 const PageLayout: React.FC<PageLayoutProps> = ({ children, fullWidth = false }) => {
+  const location = useLocation();
+  const isHome = location.pathname === "/";
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0e0e10] to-[#1a1a1e] text-white flex flex-col">
       {/* Header/Navbar layout */}
@@ -24,9 +27,11 @@ const PageLayout: React.FC<PageLayoutProps> = ({ children, fullWidth = false }) 
           fullWidth ? "" : "max-w-6xl"
         } mx-auto pt-16 pb-12`}
       >
-        <div className="absolute top-4 left-2 z-10">
-          <Breadcrumbs />
-        </div>
+        {!isHome && (
+          <div className="absolute top-4 left-2 z-10">
+            <Breadcrumbs />
+          </div>
+        )}
 
         {children}
       </main>
