@@ -40,7 +40,6 @@ const Navbar = () => {
         <ul className="hidden sm:flex flex-1 justify-center gap-10 items-center text-base font-semibold">
           <NavItem to="/">Home</NavItem>
           <NavItem to="/gamemodes">Gamemodes</NavItem>
-          <NavItem to="/leaderboards">Leaderboards</NavItem>
           <NavItem to="/rules">Rules</NavItem>
           <li className="relative" ref={forumsRef}>
             <button
