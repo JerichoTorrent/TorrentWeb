@@ -199,6 +199,7 @@ router.get("/auth/verify-email", async (req, res) => {
       {
         uuid: insertUuidDashes(player.uuid),
         username: player.username,
+        is_staff: player.is_staff === 1,
       },
       JWT_SECRET,
       { expiresIn: "7d" }
@@ -247,6 +248,7 @@ router.post("/auth/login", rateLimiter(1, 5, "Too many login attempts. Try again
       user: {
         username: user.username,
         uuid: insertUuidDashes(user.uuid),
+        is_staff: user.is_staff === 1,
       },
     });
   } catch (err) {

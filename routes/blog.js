@@ -68,7 +68,7 @@ router.get("/", (req, res) => {
           title: data.title || slug,
           date: data.date || null,
           description,
-          author: data.author || null, // ✅ add this line
+          author: data.author || null,
           tags: Array.isArray(data.tags)
             ? data.tags
             : data.tags
@@ -102,8 +102,6 @@ router.get("/:slug", (req, res) => {
     const { data, content } = matter(raw);
 
     const { html, toc } = generateHtmlAndToC(content);
-
-    console.log("✅ Final ToC:", toc);
 
     res.json({
       slug,

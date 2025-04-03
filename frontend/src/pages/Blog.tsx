@@ -61,7 +61,7 @@ const Blog: React.FC = () => {
                 key={post.slug}
                 className="w-full bg-[#1e1e22] p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow"
               >
-                <Link to={`/blog/${post.slug}`}>
+                <Link to={`/blog/${post.slug}`} state={{ title: post.metadata.title }}>
                   <h2 className="text-2xl font-semibold text-purple-300 hover:text-purple-400 transition-colors">
                     {post.metadata.title}
                   </h2>
@@ -75,7 +75,7 @@ const Blog: React.FC = () => {
                   dangerouslySetInnerHTML={{ __html: post.metadata.description }}
                 />
                 <Link
-                  to={`/blog/${post.slug}`}
+                  to={`/blog/${post.slug}`} state={{ title: post.metadata.title }}
                   className="inline-block mt-4 text-purple-400 hover:text-purple-300 transition"
                 >
                   Read more →
@@ -112,7 +112,7 @@ const Blog: React.FC = () => {
               {posts.slice(0, 10).map((post) => (
                 <li key={post.slug}>
                   <Link
-                    to={`/blog/${post.slug}`}
+                    to={`/blog/${post.slug}`} state={{ title: post.metadata.title }}
                     className="hover:text-purple-300 transition"
                   >
                     {post.metadata.title}

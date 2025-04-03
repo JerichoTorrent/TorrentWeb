@@ -27,7 +27,6 @@ module.exports = async function authenticateToken(req, res, next) {
   try {
     const verified = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Normalize UUID
     if (verified.uuid && verified.uuid.length === 32) {
       verified.uuid = insertUuidDashes(verified.uuid);
     }
@@ -40,8 +39,9 @@ module.exports = async function authenticateToken(req, res, next) {
       port: process.env.DB_PORT || 3306
     });
 
+    // ✅ Fetch is_staff field too
     const [rows] = await conn.execute(
-      "SELECT username, discord_id FROM users WHERE uuid = ?",
+      "SELECT username, discord_id, is_staff FROM users WHERE uuid = ?",
       [verified.uuid]
     );
 
@@ -54,7 +54,8 @@ module.exports = async function authenticateToken(req, res, next) {
     req.user = {
       uuid: verified.uuid,
       username: rows[0].username,
-      discordId: rows[0].discord_id
+      discordId: rows[0].discord_id,
+      is_staff: rows[0].is_staff === 1 // Convert to boolean
     };
 
     next();

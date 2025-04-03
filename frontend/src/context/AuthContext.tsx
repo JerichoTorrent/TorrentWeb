@@ -4,6 +4,7 @@ import { jwtDecode } from "jwt-decode";
 interface DecodedToken {
   uuid: string;
   username: string;
+  is_staff: boolean;
   exp: number; // expiration (UNIX)
   iat: number;
 }

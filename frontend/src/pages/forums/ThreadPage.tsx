@@ -3,24 +3,15 @@ import { useParams, useNavigate } from "react-router-dom";
 import PageLayout from "../../components/PageLayout";
 import AuthContext from "../../context/AuthContext";
 import ReplyTree from "../../components/forums/ReplyTree";
-import { Reply as ReplyType } from "../../types";
 import ThreadPost from "../../components/forums/ThreadPost";
-
-type Thread = {
-  id: number;
-  title: string;
-  content: string;
-  username: string;
-  user_id: string;
-  created_at: string;
-};
+import { Thread as ThreadType, Reply as ReplyType } from "../../types";
 
 const ThreadPage = () => {
-  const { id } = useParams<{ id: string }>();
+  const { id, categorySlug } = useParams<{ id: string; categorySlug: string }>();
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
 
-  const [thread, setThread] = useState<Thread | null>(null);
+  const [thread, setThread] = useState<ThreadType | null>(null);
   const [reputation, setReputation] = useState(0);
   const [replies, setReplies] = useState<ReplyType[]>([]);
   const [localTopReplies, setLocalTopReplies] = useState<ReplyType[]>([]);
@@ -191,7 +182,7 @@ const ThreadPage = () => {
     });
 
     if (res.ok) {
-      navigate("/forums");
+      navigate(`/forums/category/${categorySlug}`);
     } else {
       alert("Failed to delete thread.");
     }
@@ -206,7 +197,7 @@ const ThreadPage = () => {
           <div className="text-center text-red-400">
             <p>❌ {error}</p>
             <button
-              onClick={() => navigate("/forums")}
+              onClick={() => navigate(`/forums/category/${categorySlug}`)}
               className="mt-4 bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-500 transition"
             >
               Back to Forums
@@ -214,6 +205,7 @@ const ThreadPage = () => {
           </div>
         ) : thread ? (
           <>
+
             <ThreadPost
               thread={thread}
               currentUserId={user?.uuid}

@@ -25,10 +25,11 @@ import BansListPage from "./pages/BansList";
 import PlayerPunishments from "./pages/PlayerPunishments";
 import MyAppealsPage from "./pages/MyAppealsPage";
 import AppealFormPage from "./pages/AppealFormPage";
-import IndexPage from "./pages/forums/IndexPage";
 import ThreadPage from "./pages/forums/ThreadPage";
 import NewThreadPage from "./pages/forums/NewThreadPage";
+import CategoryThreadsPage from "./pages/forums/CategoryThreadsPage";
 import { JSX } from "react"; // ✅ Prevents JSX errors
+import ForumHomePage from "./pages/forums/ForumHomePage";
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
@@ -64,9 +65,10 @@ function App() {
           <Route path="/bans/:uuid" element={<PlayerPunishments />} />
           <Route path="/appeals/my" element={<MyAppealsPage />} />
           <Route path="/appeals/:type" element={<AppealFormPage />} />
-          <Route path="/forums" element={<IndexPage />} />
-          <Route path="/forums/thread/:id" element={<ThreadPage />} />
+          <Route path="/forums" element={<ForumHomePage />} />
+          <Route path="/forums/category/:categorySlug/thread/:id" element={<ThreadPage />} />
           <Route path="/forums/new-thread" element={<NewThreadPage />} />
+          <Route path="/forums/category/:slug" element={<CategoryThreadsPage />} />
         </Routes>
       </Router>
     </AuthProvider>

@@ -28,21 +28,29 @@ async function getReplyTree(threadId, parentId = null, depth = 0, maxDepth = 10)
   return children;
 }
 
-// GET paginated threads
+// GET threads by category
 router.get("/threads", async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
   const offset = (page - 1) * limit;
+  const categorySlug = req.query.category;
 
   try {
+    let whereClause = "";
+    let params = [];
+
+    if (categorySlug) {
+      const [[cat]] = await db.query("SELECT id FROM forum_categories WHERE slug = ?", [categorySlug]);
+      if (!cat) return res.status(404).json({ error: "Category not found" });
+      whereClause = "WHERE t.category_id = ?";
+      params.push(cat.id);
+    }
+
     const [rows] = await db.query(`
       SELECT 
-        t.id,
-        t.user_id,
-        t.title,
-        t.content,
-        t.created_at,
-        u.username,
+        t.id, t.user_id, t.title, t.content, t.created_at,
+        t.category_id, t.is_sticky,
+        u.username, c.slug AS category_slug, c.name AS category_name,
         COALESCE(SUM(CASE 
           WHEN r.reaction = 'upvote' THEN 1
           WHEN r.reaction = 'downvote' THEN -1
@@ -50,13 +58,18 @@ router.get("/threads", async (req, res) => {
         END), 0) AS reputation
       FROM forum_threads t
       JOIN users u ON t.user_id = u.uuid
+      JOIN forum_categories c ON t.category_id = c.id
       LEFT JOIN forum_reactions r ON t.id = r.post_id
+      ${whereClause}
       GROUP BY t.id
-      ORDER BY t.created_at DESC
+      ORDER BY t.is_sticky DESC, t.created_at DESC
       LIMIT ? OFFSET ?
-    `, [limit, offset]);
+    `, [...params, limit, offset]);
 
-    const [[{ count }]] = await db.query("SELECT COUNT(*) as count FROM forum_threads");
+    const [[{ count }]] = await db.query(`
+      SELECT COUNT(*) as count FROM forum_threads ${whereClause.replace("t.", "")}
+    `, params);
+
     res.json({ threads: rows, total: count });
   } catch (err) {
     console.error("Error fetching threads:", err);
@@ -64,15 +77,16 @@ router.get("/threads", async (req, res) => {
   }
 });
 
-// GET thread by ID
+// GET thread by ID (with category slug and name)
 router.get("/threads/:id", async (req, res) => {
   const threadId = req.params.id;
   try {
     const [rows] = await db.query(`
-      SELECT forum_threads.*, users.username
-      FROM forum_threads
-      JOIN users ON forum_threads.user_id = users.uuid
-      WHERE forum_threads.id = ?
+      SELECT t.*, u.username, c.slug as category_slug, c.name as category_name
+      FROM forum_threads t
+      JOIN users u ON t.user_id = u.uuid
+      JOIN forum_categories c ON t.category_id = c.id
+      WHERE t.id = ?
     `, [threadId]);
 
     if (rows.length === 0) return res.status(404).json({ error: "Thread not found" });
@@ -144,22 +158,78 @@ router.get("/threads/:id/replies/:parentId", async (req, res) => {
   }
 });
 
+// GET categories
+router.get("/categories", async (req, res) => {
+  try {
+    const [categories] = await db.query(`
+      SELECT * FROM forum_categories ORDER BY section, sort_order
+    `);
+
+    const grouped = categories.reduce((acc, cat) => {
+      if (!acc[cat.section]) acc[cat.section] = [];
+      acc[cat.section].push(cat);
+      return acc;
+    }, {});
+
+    res.json(grouped);
+  } catch (err) {
+    console.error("Error fetching categories:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// GET category info
+router.get("/categories/:slug", async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT * FROM forum_categories WHERE slug = ?`,
+      [req.params.slug]
+    );
+    if (rows.length === 0) return res.status(404).json({ error: "Category not found" });
+    res.json(rows[0]);
+  } catch (err) {
+    console.error("Error fetching category:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // POST a thread
 router.post("/threads", authMiddleware, limitThreadPosts, async (req, res) => {
-  const { title, content } = req.body;
+  const { title, content, category_id, is_sticky = false } = req.body;
   const userId = req.user.uuid;
 
-  if (!title || !content) {
-    return res.status(400).json({ error: "Title and content are required" });
+  if (!title || !content || !category_id) {
+    return res.status(400).json({ error: "Title, content, and category are required" });
   }
 
   try {
-    const [result] = await db.query(`
-      INSERT INTO forum_threads (user_id, title, content)
-      VALUES (?, ?, ?)
-    `, [userId, title, content]);
+    // ✅ Validate that category exists
+    const [[category]] = await db.query(
+      `SELECT id FROM forum_categories WHERE id = ?`,
+      [category_id]
+    );
 
-    res.status(201).json({ threadId: result.insertId });
+    if (!category) {
+      return res.status(400).json({ error: "Invalid category selected." });
+    }
+
+    // ✅ Prevent non-staff from setting sticky
+    if (is_sticky && !req.user.is_staff) {
+      return res.status(403).json({ error: "Only staff can create sticky threads." });
+    }
+
+    const [result] = await db.query(
+      `INSERT INTO forum_threads (user_id, title, content, category_id, is_sticky)
+       VALUES (?, ?, ?, ?, ?)`,
+      [userId, title, content, category_id, is_sticky]
+    );
+
+    const [[{ slug }]] = await db.query(
+      "SELECT slug FROM forum_categories WHERE id = ?",
+      [category_id]
+    );
+    
+    res.status(201).json({ threadId: result.insertId, categorySlug: slug });
   } catch (err) {
     console.error("Error creating thread:", err);
     res.status(500).json({ error: "Internal server error" });
