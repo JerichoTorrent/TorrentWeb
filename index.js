@@ -235,6 +235,7 @@ router.post("/auth/login", rateLimiter(1, 5, "Too many login attempts. Try again
       {
         uuid: insertUuidDashes(user.uuid),
         username: user.username,
+        is_staff: user.is_staff === 1,
       },
       JWT_SECRET,
       { expiresIn: "7d" }

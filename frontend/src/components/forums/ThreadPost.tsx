@@ -73,7 +73,16 @@ const ThreadPost = ({ thread, onDeleteThread, currentUserId }: Props) => {
 
   return (
     <div className="bg-[#1e1e22] text-gray-300 p-6 rounded-lg border border-gray-700 mb-10 relative">
-      <h1 className="text-3xl font-bold text-purple-400 mb-4">{thread.title}</h1>
+      <h2 className="text-3xl font-bold text-purple-400 mb-4">
+        {thread.is_sticky ? (
+          <>
+            <span className="mr-1">📌</span>
+              {thread.title}
+          </>
+        ) : (
+          thread.title
+        )}
+      </h2>
       <p className="text-sm text-gray-500 mb-4">
         Posted by{" "}
         <Link to={`/dashboard/${thread.username}`} className="text-purple-400 hover:underline">
@@ -130,7 +139,39 @@ const ThreadPost = ({ thread, onDeleteThread, currentUserId }: Props) => {
           )}
         </div>
       </div>
+      {user?.is_staff && (
+        <button
+          onClick={async () => {
+            const confirmToggle = confirm(
+              thread.is_sticky ? "Unpin this thread?" : "Make this thread sticky?"
+            );
+            if (!confirmToggle) return;
 
+            try {
+              const res = await fetch(`/api/forums/threads/${thread.id}/sticky`, {
+                method: "PATCH",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${user.token}`,
+                },
+                body: JSON.stringify({ is_sticky: !thread.is_sticky }),
+              });
+
+              if (res.ok) {
+                window.location.reload(); // refresh to reflect change
+              } else {
+                const data = await res.json();
+                alert(data.error || "Failed to update sticky status.");
+              }
+            } catch {
+              alert("Error updating sticky status.");
+            }
+          }}
+          className="absolute top-4 left-4 text-sm text-yellow-400 hover:underline"
+        >
+          {thread.is_sticky ? "📌 Unpin" : "📌 Make Sticky"}
+        </button>
+      )}
       {isAuthor && onDeleteThread && (
         <button
           onClick={onDeleteThread}

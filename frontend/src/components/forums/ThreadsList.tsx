@@ -1,15 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
-type Thread = {
-  id: number;
-  title: string;
-  content: string;
-  username: string;
-  created_at: string;
-  reputation: number;
-  category_slug: string; // ✅ Add this
-};
+import { Thread } from "../../types";
 
 interface ThreadsListProps {
   categorySlug?: string;
@@ -75,14 +66,25 @@ const ThreadsList = ({ categorySlug }: ThreadsListProps) => {
             {threads.map((thread) => (
               <div
                 key={thread.id}
+                className={`cursor-pointer rounded-lg p-6 hover:border-purple-500 transition border ${
+                  thread.is_sticky ? "bg-gray-900 border-gray-600" : "bg-[#1e1e22] border-gray-700"
+                }`}
                 onClick={() =>
                   navigate(`/forums/category/${thread.category_slug}/thread/${thread.id}`, {
                     state: { threadTitle: thread.title },
                   })
                 }
-                className="cursor-pointer border border-gray-700 bg-[#1e1e22] rounded-lg p-6 hover:border-purple-500 transition"
               >
-                <h2 className="text-xl font-semibold text-purple-300">{thread.title}</h2>
+                <h2 className="text-xl font-semibold text-purple-300">
+                  {thread.is_sticky ? (
+                    <>
+                      <span className="mr-1">📌</span>
+                      {thread.title}
+                    </>
+                  ) : (
+                    thread.title
+                  )}
+                </h2>
                 <p className="text-gray-400 text-sm mt-2">
                   by <span className="text-white">{thread.username}</span> ·{" "}
                   {new Date(thread.created_at).toLocaleString()}
@@ -90,7 +92,9 @@ const ThreadsList = ({ categorySlug }: ThreadsListProps) => {
                 <p className="text-gray-300 text-sm mt-3 line-clamp-3">{thread.content}</p>
                 <div className="flex items-center gap-2 mt-2 text-sm text-gray-400">
                   <span>
-                    {thread.reputation > 0 ? `+${thread.reputation}` : thread.reputation}
+                    {(thread.reputation ?? 0) > 0
+                      ? `+${thread.reputation ?? 0}`
+                      : thread.reputation ?? 0}
                   </span>
                 </div>
               </div>

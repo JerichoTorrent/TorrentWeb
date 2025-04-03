@@ -201,7 +201,9 @@ router.post("/threads", authMiddleware, limitThreadPosts, async (req, res) => {
   if (!title || !content || !category_id) {
     return res.status(400).json({ error: "Title, content, and category are required" });
   }
-
+  if (category_id === 1 && !req.user.is_staff) { // Current logic is to use id 1 for announcements, change this if needed!
+    return res.status(403).json({ error: "Only staff can post in this category." });
+  }
   try {
     // ✅ Validate that category exists
     const [[category]] = await db.query(
@@ -292,6 +294,57 @@ router.put("/replies/:id", authMiddleware, async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     console.error("Error updating reply:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Make sticky
+router.put("/threads/:id/sticky", authMiddleware, async (req, res) => {
+  const threadId = req.params.id;
+  const { is_sticky } = req.body;
+
+  if (!req.user.is_staff) {
+    return res.status(403).json({ error: "Only staff can update sticky status." });
+  }
+
+  try {
+    await db.query(
+      `UPDATE forum_threads SET is_sticky = ? WHERE id = ?`,
+      [is_sticky ? 1 : 0, threadId]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Error updating sticky status:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// PATCH to toggle sticky status (staff only)
+router.patch("/threads/:id/sticky", authMiddleware, async (req, res) => {
+  const threadId = req.params.id;
+  const { is_sticky } = req.body;
+
+  if (typeof is_sticky !== "boolean") {
+    return res.status(400).json({ error: "is_sticky must be a boolean" });
+  }
+
+  if (!req.user.is_staff) {
+    return res.status(403).json({ error: "Only staff can update sticky status." });
+  }
+
+  try {
+    const [result] = await db.query(
+      `UPDATE forum_threads SET is_sticky = ? WHERE id = ?`,
+      [is_sticky, threadId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Thread not found." });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Error updating sticky status:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });

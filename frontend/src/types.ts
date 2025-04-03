@@ -5,6 +5,8 @@ export type Thread = {
   username: string;
   user_id: string;
   created_at: string;
+  reputation?: number;
+  is_sticky: boolean;
   category_slug: string;
   category_name: string;
 };
