@@ -21,6 +21,7 @@ const ThreadPage = () => {
   const { user } = useContext(AuthContext);
 
   const [thread, setThread] = useState<Thread | null>(null);
+  const [reputation, setReputation] = useState(0);
   const [replies, setReplies] = useState<ReplyType[]>([]);
   const [localTopReplies, setLocalTopReplies] = useState<ReplyType[]>([]);
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
@@ -46,10 +47,16 @@ const ThreadPage = () => {
         const repliesRes = await fetch(`/api/forums/threads/${id}/replies?page=${page}&limit=${limit}`);
         const repliesData = await repliesRes.json();
 
+        const repRes = await fetch(`/api/forums/posts/${threadData.thread.id}/reputation`);
+        if (repRes.ok) {
+          const repData = await repRes.json();
+          setReputation(repData.reputation);
+        }
+
         setThread(threadData.thread);
         setReplies(repliesData.replies || []);
         setTotalReplies(repliesData.total || 0);
-        setLocalTopReplies([]); // Clear temporary top-level replies
+        setLocalTopReplies([]);
         setLoading(false);
       } catch (err: any) {
         setError(err.message);

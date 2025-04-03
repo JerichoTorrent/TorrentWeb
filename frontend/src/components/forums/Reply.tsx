@@ -34,14 +34,15 @@ const Reply = ({
   const { user } = useContext(AuthContext);
   const [editedContent, setEditedContent] = useState(reply.content);
   const [maxDepth, setMaxDepth] = useState(10);
+  const [reputation, setReputation] = useState(0);
+  const [showFlagMenu, setShowFlagMenu] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     const checkWidth = () => {
       setMaxDepth(window.innerWidth < 768 ? 5 : 10);
     };
-
-    checkWidth(); // Initial check
+    checkWidth();
     window.addEventListener("resize", checkWidth);
     return () => window.removeEventListener("resize", checkWidth);
   }, []);
@@ -52,6 +53,60 @@ const Reply = ({
     }
   }, [isReplying]);
 
+  useEffect(() => {
+    const fetchReputation = async () => {
+      try {
+        const res = await fetch(`/api/forums/posts/${reply.id}/reputation`);
+        const data = await res.json();
+        if (res.ok) setReputation(data.reputation);
+      } catch {
+        console.error("Failed to fetch reply reputation.");
+      }
+    };
+    fetchReputation();
+  }, [reply.id]);
+
+  const handleReaction = async (type: "upvote" | "downvote") => {
+    if (!user) return alert("Login required.");
+    try {
+      const res = await fetch(`/api/forums/posts/${reply.id}/react`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({ reaction: type }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setReputation(data.reputation);
+      } else {
+        alert(data.error || "Failed to react.");
+      }
+    } catch {
+      alert("Error submitting reaction.");
+    }
+  };
+
+  const handleFlag = async (reason: string) => {
+    if (!user) return alert("Login required.");
+    setShowFlagMenu(false);
+    try {
+      const res = await fetch(`/api/forums/posts/${reply.id}/flag`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({ reason }),
+      });
+      const data = await res.json();
+      if (!res.ok) alert(data.error || "Failed to flag.");
+    } catch {
+      alert("Error submitting flag.");
+    }
+  };
+
   const effectiveDepth = Math.min(depth, maxDepth);
   const marginLeft = `${effectiveDepth * 12}px`;
 
@@ -59,13 +114,13 @@ const Reply = ({
     <div className="mb-3 relative" style={{ marginLeft }}>
       <div className="border-l border-gray-600 pl-4">
         <p className="text-sm text-gray-400 mb-1">
-        <a
-          href={`/dashboard/${reply.username}`}
-          className="text-white hover:underline hover:text-purple-400 transition"
-        >
-          {reply.username}
-        </a> ·{" "}
-          {new Date(reply.created_at).toLocaleString()}
+          <a
+            href={`/dashboard/${reply.username}`}
+            className="text-white hover:underline hover:text-purple-400 transition"
+          >
+            {reply.username}
+          </a>{" "}
+          · {new Date(reply.created_at).toLocaleString()}
         </p>
 
         {isEditing ? (
@@ -98,7 +153,7 @@ const Reply = ({
           <p className="text-gray-300 whitespace-pre-wrap">{reply.content}</p>
         )}
 
-        <div className="flex gap-4 text-sm mt-2">
+        <div className="flex flex-wrap items-center gap-4 text-sm mt-2">
           {user && !isEditing && (
             <button onClick={() => onReply(reply.id)} className="text-blue-400 hover:underline">
               Reply
@@ -115,14 +170,50 @@ const Reply = ({
               >
                 Edit
               </button>
-              <button
-                onClick={() => onDelete(reply.id)}
-                className="text-red-500 hover:underline"
-              >
+              <button onClick={() => onDelete(reply.id)} className="text-red-500 hover:underline">
                 Delete
               </button>
             </>
           )}
+
+          <div className="flex items-center gap-2">
+            <button onClick={() => handleReaction("upvote")} className="text-green-400 hover:underline">
+              ▲
+            </button>
+            <span className="text-gray-400">{reputation}</span>
+            <button onClick={() => handleReaction("downvote")} className="text-red-400 hover:underline">
+              ▼
+            </button>
+          </div>
+
+          <div className="relative">
+            <button
+              onClick={() => setShowFlagMenu((prev) => !prev)}
+              className="text-sm text-gray-400 hover:underline"
+            >
+              🚩 Flag
+            </button>
+            {showFlagMenu && (
+              <div className="absolute z-10 mt-1 bg-[#1e1e22] border border-gray-700 rounded shadow text-sm">
+                {[
+                  ["inappropriate", "Inappropriate Content"],
+                  ["harassment", "Bullying/Harassment"],
+                  ["doxxing", "Doxxing"],
+                  ["guidelines", "Doesn't follow guidelines"],
+                  ["exploits", "Server exploits"],
+                  ["other", "Other"],
+                ].map(([key, label]) => (
+                  <button
+                    key={key}
+                    onClick={() => handleFlag(key)}
+                    className="block px-4 py-2 w-full text-left hover:bg-gray-800 text-white"
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {isReplying && (

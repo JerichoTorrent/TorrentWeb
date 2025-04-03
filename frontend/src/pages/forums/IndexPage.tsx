@@ -8,6 +8,7 @@ type Thread = {
   content: string;
   username: string;
   created_at: string;
+  reputation: number;
 };
 
 const IndexPage = () => {
@@ -72,6 +73,9 @@ const IndexPage = () => {
                     {new Date(thread.created_at).toLocaleString()}
                   </p>
                   <p className="text-gray-300 text-sm mt-3 line-clamp-3">{thread.content}</p>
+                  <div className="flex items-center gap-2 mt-2 text-sm text-gray-400">
+                    <span>{thread.reputation > 0 ? `+${thread.reputation}` : thread.reputation}</span>
+                  </div>
                 </div>
               ))}
             </div>

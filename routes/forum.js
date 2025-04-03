@@ -36,10 +36,23 @@ router.get("/threads", async (req, res) => {
 
   try {
     const [rows] = await db.query(`
-      SELECT forum_threads.*, users.username
-      FROM forum_threads
-      JOIN users ON forum_threads.user_id = users.uuid
-      ORDER BY forum_threads.created_at DESC
+      SELECT 
+        t.id,
+        t.user_id,
+        t.title,
+        t.content,
+        t.created_at,
+        u.username,
+        COALESCE(SUM(CASE 
+          WHEN r.reaction = 'upvote' THEN 1
+          WHEN r.reaction = 'downvote' THEN -1
+          ELSE 0
+        END), 0) AS reputation
+      FROM forum_threads t
+      JOIN users u ON t.user_id = u.uuid
+      LEFT JOIN forum_reactions r ON t.id = r.post_id
+      GROUP BY t.id
+      ORDER BY t.created_at DESC
       LIMIT ? OFFSET ?
     `, [limit, offset]);
 
