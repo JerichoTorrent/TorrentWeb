@@ -10,6 +10,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import rateLimiter from "./utils/rateLimiter.js";
 import discordRoutes from "./bot.js";
+import forumRoutes from "./routes/forum.js";
 
 import db from "./utils/db.js"; // ✅ shared DB pool
 import blogRoutes from "./routes/blog.js";
@@ -39,6 +40,7 @@ app.use("/api/blog", blogRoutes);
 app.use("/api/bans", bansRoutes);
 app.use("/api/appeals", appealsRoutes);
 app.use("/api", discordRoutes);
+app.use("/api/forums", forumRoutes);
 app.use(express.static(FRONTEND_BUILD_PATH));
 
 // ✅ Verify DB Connection

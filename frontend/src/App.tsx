@@ -25,6 +25,9 @@ import BansListPage from "./pages/BansList";
 import PlayerPunishments from "./pages/PlayerPunishments";
 import MyAppealsPage from "./pages/MyAppealsPage";
 import AppealFormPage from "./pages/AppealFormPage";
+import IndexPage from "./pages/forums/IndexPage";
+import ThreadPage from "./pages/forums/ThreadPage";
+import NewThreadPage from "./pages/forums/NewThreadPage";
 import { JSX } from "react"; // ✅ Prevents JSX errors
 
 // Protected Route Wrapper
@@ -61,6 +64,9 @@ function App() {
           <Route path="/bans/:uuid" element={<PlayerPunishments />} />
           <Route path="/appeals/my" element={<MyAppealsPage />} />
           <Route path="/appeals/:type" element={<AppealFormPage />} />
+          <Route path="/forums" element={<IndexPage />} />
+          <Route path="/forums/thread/:id" element={<ThreadPage />} />
+          <Route path="/forums/new-thread" element={<NewThreadPage />} />
         </Routes>
       </Router>
     </AuthProvider>

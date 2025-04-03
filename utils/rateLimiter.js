@@ -21,4 +21,28 @@ export default function rateLimiter(windowMinutes = 60, maxRequests = 3, message
     },
     skip: (req) => req.ip === exemptIp
   });
+  
 }
+// In-memory store (replace with Redis or DB in prod)
+const lastAction = {};
+
+function userLimit(type, windowSeconds = 10) {
+  return (req, res, next) => {
+    const userId = req.user?.uuid;
+    const key = `${type}:${userId}`;
+    const now = Date.now();
+
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+    if (lastAction[key] && now - lastAction[key] < windowSeconds * 1000) {
+      const wait = Math.ceil((windowSeconds * 1000 - (now - lastAction[key])) / 1000);
+      return res.status(429).json({ error: `Please wait ${wait}s before posting again.` });
+    }
+
+    lastAction[key] = now;
+    next();
+  };
+}
+
+export const limitThreadPosts = userLimit("thread", 60);
+export const limitReplies = userLimit("reply", 10);
