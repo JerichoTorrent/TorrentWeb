@@ -12,6 +12,7 @@ export type Thread = {
 };
   
 export type Reply = {
+  edited: boolean;
   id: number;
   thread_id: number;
   parent_id: number | null;
@@ -20,4 +21,5 @@ export type Reply = {
   content: string;
   created_at: string;
   children?: Reply[];
+  deleted?: boolean;
 };

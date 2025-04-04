@@ -314,7 +314,7 @@ router.put("/replies/:id", authMiddleware, async (req, res) => {
     }
 
     await db.query(`
-      UPDATE forum_posts SET content = ?, created_at = NOW() WHERE id = ?
+      UPDATE forum_posts SET content = ?, created_at = NOW(), edited = TRUE WHERE id = ?
     `, [content, replyId]);
 
     res.json({ success: true });
