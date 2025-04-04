@@ -5,7 +5,6 @@ import { limitThreadPosts, limitReplies } from "../utils/rateLimiter.js";
 
 const router = express.Router();
 
-// Recursive reply tree function
 async function getReplyTree(threadId, parentId = null, depth = 0, maxDepth = 10) {
   if (depth >= maxDepth) return [];
 
@@ -22,6 +21,12 @@ async function getReplyTree(threadId, parentId = null, depth = 0, maxDepth = 10)
   const children = [];
   for (const row of rows) {
     const nested = await getReplyTree(threadId, row.id, depth + 1, maxDepth);
+
+    if (row.deleted) {
+      row.content = "[Deleted by staff]";
+      row.username = "[Deleted]";
+    }
+
     children.push({ ...row, children: nested });
   }
 
@@ -34,22 +39,24 @@ router.get("/threads", async (req, res) => {
   const limit = parseInt(req.query.limit) || 10;
   const offset = (page - 1) * limit;
   const categorySlug = req.query.category;
+  const whereWithAlias = "WHERE t.deleted = FALSE" + (categorySlug ? " AND t.category_id = ?" : "");
+  const whereNoAlias = "WHERE deleted = FALSE" + (categorySlug ? " AND category_id = ?" : "");
 
   try {
-    let whereClause = "";
+    let whereClause = "WHERE t.deleted = FALSE";
     let params = [];
 
     if (categorySlug) {
       const [[cat]] = await db.query("SELECT id FROM forum_categories WHERE slug = ?", [categorySlug]);
       if (!cat) return res.status(404).json({ error: "Category not found" });
-      whereClause = "WHERE t.category_id = ?";
+      whereClause += " AND t.category_id = ?";
       params.push(cat.id);
     }
 
     const [rows] = await db.query(`
       SELECT 
         t.id, t.user_id, t.title, t.content, t.created_at,
-        t.category_id, t.is_sticky,
+        t.category_id, t.is_sticky, t.deleted,
         u.username, c.slug AS category_slug, c.name AS category_name,
         COALESCE(SUM(CASE 
           WHEN r.reaction = 'upvote' THEN 1
@@ -60,24 +67,37 @@ router.get("/threads", async (req, res) => {
       JOIN users u ON t.user_id = u.uuid
       JOIN forum_categories c ON t.category_id = c.id
       LEFT JOIN forum_reactions r ON t.id = r.post_id
-      ${whereClause}
+      ${whereWithAlias}
       GROUP BY t.id
       ORDER BY t.is_sticky DESC, t.created_at DESC
       LIMIT ? OFFSET ?
     `, [...params, limit, offset]);
 
+    // Sanitize deleted threads (if shown in future)
+    const threads = rows.map((thread) => {
+      if (thread.deleted) {
+        return {
+          ...thread,
+          title: "[Deleted by staff]",
+          content: "[Deleted by staff]",
+          username: "[Deleted]"
+        };
+      }
+      return thread;
+    });
+
     const [[{ count }]] = await db.query(`
-      SELECT COUNT(*) as count FROM forum_threads ${whereClause.replace("t.", "")}
+      SELECT COUNT(*) as count FROM forum_threads ${whereNoAlias}
     `, params);
 
-    res.json({ threads: rows, total: count });
+    res.json({ threads, total: count });
   } catch (err) {
     console.error("Error fetching threads:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// GET thread by ID (with category slug and name)
+// GET thread by ID
 router.get("/threads/:id", async (req, res) => {
   const threadId = req.params.id;
   try {
@@ -90,14 +110,21 @@ router.get("/threads/:id", async (req, res) => {
     `, [threadId]);
 
     if (rows.length === 0) return res.status(404).json({ error: "Thread not found" });
-    res.json({ thread: rows[0] });
+
+    let thread = rows[0];
+    if (thread.deleted) {
+      thread.title = "[Deleted by staff]";
+      thread.content = "[Deleted by staff]";
+      thread.username = "[Deleted]";
+    }
+
+    res.json({ thread });
   } catch (err) {
     console.error("Error fetching thread:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// GET top-level replies and nested tree
 router.get("/threads/:id/replies", async (req, res) => {
   const threadId = req.params.id;
   const page = parseInt(req.query.page) || 1;
@@ -114,26 +141,29 @@ router.get("/threads/:id/replies", async (req, res) => {
       LIMIT ? OFFSET ?
     `, [threadId, limit, offset]);
 
-    const fullReplies = await Promise.all(
+    const sanitizedReplies = await Promise.all(
       topReplies.map(async (reply) => {
         const children = await getReplyTree(threadId, reply.id);
+        if (reply.deleted) {
+          reply.content = "[Deleted by staff]";
+          reply.username = "[Deleted]";
+        }
         return { ...reply, children };
       })
     );
 
     const [[{ count }]] = await db.query(`
       SELECT COUNT(*) as count FROM forum_posts
-      WHERE thread_id = ? AND parent_id IS NULL
+      WHERE thread_id = ? AND parent_id IS NULL AND deleted = FALSE
     `, [threadId]);
 
-    res.json({ replies: fullReplies, total: count });
+    res.json({ replies: sanitizedReplies, total: count });
   } catch (err) {
     console.error("Error fetching replies:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// GET reply branch
 router.get("/threads/:id/replies/:parentId", async (req, res) => {
   const threadId = req.params.id;
   const parentId = req.params.parentId;
@@ -150,15 +180,20 @@ router.get("/threads/:id/replies/:parentId", async (req, res) => {
       return res.status(404).json({ error: "Parent reply not found" });
     }
 
+    const parent = parentRows[0];
+    if (parent.deleted) {
+      parent.content = "[Deleted by staff]";
+      parent.username = "[Deleted]";
+    }
+
     const replyTree = await getReplyTree(threadId, Number(parentId));
-    res.json({ parent: parentRows[0], replies: replyTree });
+    res.json({ parent, replies: replyTree });
   } catch (err) {
     console.error("Error fetching reply branch:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// GET categories
 router.get("/categories", async (req, res) => {
   try {
     const [categories] = await db.query(`
@@ -178,7 +213,6 @@ router.get("/categories", async (req, res) => {
   }
 });
 
-// GET category info
 router.get("/categories/:slug", async (req, res) => {
   try {
     const [rows] = await db.query(
@@ -193,7 +227,6 @@ router.get("/categories/:slug", async (req, res) => {
   }
 });
 
-// POST a thread
 router.post("/threads", authMiddleware, limitThreadPosts, async (req, res) => {
   const { title, content, category_id, is_sticky = false } = req.body;
   const userId = req.user.uuid;
@@ -201,21 +234,16 @@ router.post("/threads", authMiddleware, limitThreadPosts, async (req, res) => {
   if (!title || !content || !category_id) {
     return res.status(400).json({ error: "Title, content, and category are required" });
   }
-  if (category_id === 1 && !req.user.is_staff) { // Current logic is to use id 1 for announcements, change this if needed!
+  if (category_id === 1 && !req.user.is_staff) {
     return res.status(403).json({ error: "Only staff can post in this category." });
   }
-  try {
-    // ✅ Validate that category exists
-    const [[category]] = await db.query(
-      `SELECT id FROM forum_categories WHERE id = ?`,
-      [category_id]
-    );
 
+  try {
+    const [[category]] = await db.query(`SELECT id FROM forum_categories WHERE id = ?`, [category_id]);
     if (!category) {
       return res.status(400).json({ error: "Invalid category selected." });
     }
 
-    // ✅ Prevent non-staff from setting sticky
     if (is_sticky && !req.user.is_staff) {
       return res.status(403).json({ error: "Only staff can create sticky threads." });
     }
@@ -238,7 +266,6 @@ router.post("/threads", authMiddleware, limitThreadPosts, async (req, res) => {
   }
 });
 
-// POST a reply
 router.post("/threads/:id/replies", authMiddleware, limitReplies, async (req, res) => {
   const { content, parent_id = null } = req.body;
   const userId = req.user.uuid;
@@ -268,7 +295,6 @@ router.post("/threads/:id/replies", authMiddleware, limitReplies, async (req, re
   }
 });
 
-// PUT edit reply
 router.put("/replies/:id", authMiddleware, async (req, res) => {
   const replyId = req.params.id;
   const { content } = req.body;
@@ -298,28 +324,6 @@ router.put("/replies/:id", authMiddleware, async (req, res) => {
   }
 });
 
-// Make sticky
-router.put("/threads/:id/sticky", authMiddleware, async (req, res) => {
-  const threadId = req.params.id;
-  const { is_sticky } = req.body;
-
-  if (!req.user.is_staff) {
-    return res.status(403).json({ error: "Only staff can update sticky status." });
-  }
-
-  try {
-    await db.query(
-      `UPDATE forum_threads SET is_sticky = ? WHERE id = ?`,
-      [is_sticky ? 1 : 0, threadId]
-    );
-    res.json({ success: true });
-  } catch (err) {
-    console.error("Error updating sticky status:", err);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-// PATCH to toggle sticky status (staff only)
 router.patch("/threads/:id/sticky", authMiddleware, async (req, res) => {
   const threadId = req.params.id;
   const { is_sticky } = req.body;
@@ -349,21 +353,21 @@ router.patch("/threads/:id/sticky", authMiddleware, async (req, res) => {
   }
 });
 
-// DELETE a reply
 router.delete("/replies/:id", authMiddleware, async (req, res) => {
   const replyId = req.params.id;
   const userId = req.user.uuid;
+  const isStaff = req.user.is_staff;
 
   try {
     const [rows] = await db.query(`
-      SELECT * FROM forum_posts WHERE id = ? AND user_id = ?
-    `, [replyId, userId]);
+      SELECT * FROM forum_posts WHERE id = ?
+    `, [replyId]);
 
-    if (rows.length === 0) {
+    if (rows.length === 0 || (!isStaff && rows[0].user_id !== userId)) {
       return res.status(403).json({ error: "Not authorized to delete this reply." });
     }
 
-    await db.query(`DELETE FROM forum_posts WHERE id = ?`, [replyId]);
+    await db.query(`UPDATE forum_posts SET deleted = TRUE WHERE id = ?`, [replyId]);
     res.json({ success: true });
   } catch (err) {
     console.error("Error deleting reply:", err);
@@ -371,21 +375,21 @@ router.delete("/replies/:id", authMiddleware, async (req, res) => {
   }
 });
 
-// DELETE a thread
 router.delete("/threads/:id", authMiddleware, async (req, res) => {
   const threadId = req.params.id;
   const userId = req.user.uuid;
+  const isStaff = req.user.is_staff;
 
   try {
     const [rows] = await db.query(`
-      SELECT * FROM forum_threads WHERE id = ? AND user_id = ?
-    `, [threadId, userId]);
+      SELECT * FROM forum_threads WHERE id = ?
+    `, [threadId]);
 
-    if (rows.length === 0) {
+    if (rows.length === 0 || (!isStaff && rows[0].user_id !== userId)) {
       return res.status(403).json({ error: "Not authorized to delete this thread." });
     }
 
-    await db.query(`DELETE FROM forum_threads WHERE id = ?`, [threadId]);
+    await db.query(`UPDATE forum_threads SET deleted = TRUE WHERE id = ?`, [threadId]);
     res.json({ success: true });
   } catch (err) {
     console.error("Error deleting thread:", err);

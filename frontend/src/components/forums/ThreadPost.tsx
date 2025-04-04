@@ -172,7 +172,7 @@ const ThreadPost = ({ thread, onDeleteThread, currentUserId }: Props) => {
           {thread.is_sticky ? "📌 Unpin" : "📌 Make Sticky"}
         </button>
       )}
-      {isAuthor && onDeleteThread && (
+      {(isAuthor || user?.is_staff) && onDeleteThread && (
         <button
           onClick={onDeleteThread}
           className="absolute top-4 right-4 text-sm text-red-500 hover:underline"
