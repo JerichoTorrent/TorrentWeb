@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useContext } from "react";
 import { Reply as ReplyType } from "../../types";
 import AuthContext from "../../context/AuthContext";
+import Markdown from "markdown-to-jsx";
 
 type ReplyProps = {
   reply: ReplyType;
@@ -159,7 +160,9 @@ const Reply = ({
                 </div>
               </>
             ) : (
-              <p className="text-gray-300 whitespace-pre-wrap">{reply.content}</p>
+              <Markdown className="text-gray-300 whitespace-pre-wrap">
+                {reply.content}
+              </Markdown>
             )}
 
             <div className="flex flex-wrap items-center gap-4 text-sm mt-2">

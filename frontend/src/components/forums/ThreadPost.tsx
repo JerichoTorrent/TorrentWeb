@@ -2,6 +2,7 @@ import { useContext, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Thread } from "../../types";
 import AuthContext from "../../context/AuthContext";
+import Markdown from "markdown-to-jsx";
 
 type Props = {
   thread: Thread;
@@ -91,7 +92,7 @@ const ThreadPost = ({ thread, onDeleteThread, currentUserId }: Props) => {
         on {new Date(thread.created_at).toLocaleString()}
       </p>
 
-      <div className="whitespace-pre-wrap mb-4">{thread.content}</div>
+      <Markdown className="mb-4 text-gray-300">{thread.content}</Markdown>
 
       <div className="flex flex-wrap items-center gap-4 text-sm mt-2">
         <div className="flex items-center gap-2">

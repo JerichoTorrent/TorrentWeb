@@ -2,6 +2,8 @@ import express from "express";
 import db from "../utils/db.js";
 import authMiddleware from "../middleware/authMiddleware.js";
 import { limitThreadPosts, limitReplies } from "../utils/rateLimiter.js";
+import { filterBadWords } from "../utils/filterBadWords.js";
+import { marked } from 'marked';
 
 const router = express.Router();
 
@@ -83,7 +85,10 @@ router.get("/threads", async (req, res) => {
           username: "[Deleted]"
         };
       }
-      return thread;
+      return {
+        ...thread,
+        content_html: marked.parse(thread.content.slice(0, 300) + '...')  // render a short markdown preview
+      };
     });
 
     const [[{ count }]] = await db.query(`
@@ -251,7 +256,7 @@ router.post("/threads", authMiddleware, limitThreadPosts, async (req, res) => {
     const [result] = await db.query(
       `INSERT INTO forum_threads (user_id, title, content, category_id, is_sticky)
        VALUES (?, ?, ?, ?, ?)`,
-      [userId, title, content, category_id, is_sticky]
+      [userId, filterBadWords(title), filterBadWords(content), category_id, is_sticky]
     );
 
     const [[{ slug }]] = await db.query(
@@ -279,7 +284,7 @@ router.post("/threads/:id/replies", authMiddleware, limitReplies, async (req, re
     const [result] = await db.query(`
       INSERT INTO forum_posts (thread_id, user_id, content, parent_id)
       VALUES (?, ?, ?, ?)
-    `, [threadId, userId, content, parent_id]);
+    `, [threadId, userId, filterBadWords(content), parent_id]);
 
     const [rows] = await db.query(`
       SELECT forum_posts.*, users.username
@@ -315,7 +320,7 @@ router.put("/replies/:id", authMiddleware, async (req, res) => {
 
     await db.query(`
       UPDATE forum_posts SET content = ?, created_at = NOW(), edited = TRUE WHERE id = ?
-    `, [content, replyId]);
+    `, [filterBadWords(content), replyId]);
 
     res.json({ success: true });
   } catch (err) {

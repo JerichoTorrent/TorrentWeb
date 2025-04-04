@@ -22,23 +22,23 @@ const NewThreadPage = () => {
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [isSticky, setIsSticky] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [selectedCategoryName, setSelectedCategoryName] = useState<string>("");
   const [groupedCategories, setGroupedCategories] = useState<Record<string, Category[]>>({});
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch all categories and optionally select one
   useEffect(() => {
     fetch("/api/forums/categories")
       .then((res) => res.json())
       .then((data) => {
         setGroupedCategories(data);
-
         if (categorySlug) {
           for (const section of Object.keys(data)) {
-            const match = data[section].find((c: { slug: string; }) => c.slug === categorySlug);
+            const match = data[section].find((c: { slug: string }) => c.slug === categorySlug);
             if (match) {
               setCategoryId(match.id);
               setSelectedCategoryName(match.name);
@@ -53,8 +53,6 @@ const NewThreadPage = () => {
   const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedId = parseInt(e.target.value, 10);
     setCategoryId(selectedId);
-
-    // Find the selected category name for display
     for (const section of Object.values(groupedCategories)) {
       const found = section.find((c) => c.id === selectedId);
       if (found) {
@@ -64,9 +62,48 @@ const NewThreadPage = () => {
     }
   };
 
+  const handleImageUpload = async (files: FileList) => {
+    const validFiles = Array.from(files).slice(0, 5 - uploadedImages.length);
+    setUploading(true);
+    try {
+      for (const file of validFiles) {
+        if (file.size > 3 * 1024 * 1024) {
+          alert(`${file.name} is too large (max 3MB). Skipping.`);
+          continue;
+        }
+
+        const formData = new FormData();
+        formData.append("image", file);
+
+        const res = await fetch("/api/forums/upload-image", {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.url) {
+          setUploadedImages((prev) => [...prev, data.url]);
+          setContent((prev) => `${prev}\n![](${data.url})`);
+        } else {
+          alert(data.error || `Upload failed for ${file.name}`);
+        }
+      }
+    } catch (err) {
+      console.error("Upload error:", err);
+      alert("Image upload error.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!title || !content || !categoryId) {
+
+    const trimmedTitle = title.trim();
+    const trimmedContent = content.trim();
+
+    if (!trimmedTitle || !trimmedContent || !categoryId) {
       setError("Missing required fields.");
       return;
     }
@@ -82,8 +119,8 @@ const NewThreadPage = () => {
           Authorization: `Bearer ${user?.token}`,
         },
         body: JSON.stringify({
-          title,
-          content,
+          title: trimmedTitle,
+          content: trimmedContent,
           is_sticky: isSticky,
           category_id: categoryId,
         }),
@@ -169,6 +206,32 @@ const NewThreadPage = () => {
             />
           </div>
 
+          <div className="mb-4">
+            <label className="block text-sm text-white mb-1">Attach up to 5 images (3MB max each):</label>
+            <input
+              type="file"
+              accept=".png,.jpg,.jpeg"
+              multiple
+              onChange={(e) => {
+                if (e.target.files?.length) handleImageUpload(e.target.files);
+              }}
+              className="text-white"
+            />
+            {uploading && <p className="text-sm text-gray-400 mt-2">Uploading...</p>}
+            {uploadedImages.length > 0 && (
+              <div className="mt-2 grid grid-cols-2 gap-4">
+                {uploadedImages.map((url, i) => (
+                  <img
+                    key={i}
+                    src={url}
+                    alt={`Uploaded ${i + 1}`}
+                    className="max-w-full border border-gray-700 rounded"
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">Content</label>
             <textarea
@@ -177,7 +240,7 @@ const NewThreadPage = () => {
               value={content}
               onChange={(e) => setContent(e.target.value)}
               className="w-full rounded bg-[#1e1e22] border border-gray-700 p-3 text-white"
-              placeholder="Write your post here..."
+              placeholder="Write your markdown post here..."
             />
           </div>
 

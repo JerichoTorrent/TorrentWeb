@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Thread } from "../../types";
+import { parseInline } from "marked";
+import DOMPurify from "dompurify";
 
 interface ThreadsListProps {
   categorySlug?: string;
@@ -89,7 +91,14 @@ const ThreadsList = ({ categorySlug }: ThreadsListProps) => {
                   by <span className="text-white">{thread.username}</span> ·{" "}
                   {new Date(thread.created_at).toLocaleString()}
                 </p>
-                <p className="text-gray-300 text-sm mt-3 line-clamp-3">{thread.content}</p>
+                <div
+                  className="text-gray-300 text-sm mt-3 prose prose-invert max-w-none"
+                  dangerouslySetInnerHTML={{
+                    __html: DOMPurify.sanitize(
+                      parseInline((thread.content || "").slice(0, 400)) + "..."
+                    ),
+                  }}
+                ></div>
                 <div className="flex items-center gap-2 mt-2 text-sm text-gray-400">
                   <span>
                     {(thread.reputation ?? 0) > 0
