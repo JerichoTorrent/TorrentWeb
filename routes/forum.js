@@ -4,6 +4,7 @@ import authMiddleware from "../middleware/authMiddleware.js";
 import { limitThreadPosts, limitReplies } from "../utils/rateLimiter.js";
 import { filterBadWords } from "../utils/filterBadWords.js";
 import { marked } from 'marked';
+import jwt from "jsonwebtoken";
 
 const router = express.Router();
 
@@ -230,6 +231,17 @@ router.get("/categories/:slug", async (req, res) => {
     console.error("Error fetching category:", err);
     res.status(500).json({ error: "Internal server error" });
   }
+});
+
+router.get("/auth/upload-token", authMiddleware, (req, res) => {
+  const payload = {
+    uuid: req.user.uuid,
+    type: "upload",
+  };
+
+  const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "2h" });
+
+  res.json({ token });
 });
 
 router.post("/threads", authMiddleware, limitThreadPosts, async (req, res) => {

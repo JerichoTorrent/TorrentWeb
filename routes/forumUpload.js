@@ -6,6 +6,7 @@ import fetch from "node-fetch";
 import { v4 as uuidv4 } from "uuid";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
+import jwt from "jsonwebtoken";
 
 const router = express.Router();
 
@@ -34,6 +35,28 @@ const upload = multer({
     const ext = path.extname(file.originalname).toLowerCase();
     cb(null, [".png", ".jpg", ".jpeg"].includes(ext));
   },
+});
+
+// Middleware to validate tokens
+router.use("/api/forums/upload-image", (req, res, next) => {
+  const authHeader = req.headers["authorization"];
+  const uploadToken = req.headers["x-upload-token"];
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Missing or invalid auth token" });
+  }
+
+  if (!uploadToken || typeof uploadToken !== "string" || uploadToken.length < 10) {
+    return res.status(403).json({ error: "Missing or invalid upload token" });
+  }
+
+  try {
+    const token = authHeader.split(" ")[1];
+    jwt.verify(token, process.env.JWT_SECRET); // just verifies it's a real user
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
 });
 
 // Static route to serve uploaded images
