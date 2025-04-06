@@ -5,6 +5,7 @@ import { limitThreadPosts, limitReplies } from "../utils/rateLimiter.js";
 import { filterBadWords } from "../utils/filterBadWords.js";
 import { marked } from 'marked';
 import jwt from "jsonwebtoken";
+import { extractMentions, linkifyMentions } from "../utils/mentionParser.js";
 
 const router = express.Router();
 
@@ -30,7 +31,11 @@ async function getReplyTree(threadId, parentId = null, depth = 0, maxDepth = 10)
       row.username = "[Deleted]";
     }
 
-    children.push({ ...row, children: nested });
+    children.push({
+      ...row,
+      content_html: marked.parse(linkifyMentions(row.content)),
+      children: nested,
+    });
   }
 
   return children;
@@ -46,9 +51,8 @@ router.get("/threads", async (req, res) => {
   const whereNoAlias = "WHERE deleted = FALSE" + (categorySlug ? " AND category_id = ?" : "");
 
   try {
-    let whereClause = "WHERE t.deleted = FALSE";
     let params = [];
-
+    let whereClause = "WHERE t.deleted = FALSE";
     if (categorySlug) {
       const [[cat]] = await db.query("SELECT id FROM forum_categories WHERE slug = ?", [categorySlug]);
       if (!cat) return res.status(404).json({ error: "Category not found" });
@@ -70,7 +74,7 @@ router.get("/threads", async (req, res) => {
       JOIN users u ON t.user_id = u.uuid
       JOIN forum_categories c ON t.category_id = c.id
       LEFT JOIN forum_reactions r ON t.id = r.post_id
-      ${whereWithAlias}
+      ${whereClause}
       GROUP BY t.id
       ORDER BY t.is_sticky DESC, t.created_at DESC
       LIMIT ? OFFSET ?
@@ -88,7 +92,7 @@ router.get("/threads", async (req, res) => {
       }
       return {
         ...thread,
-        content_html: marked.parse(thread.content.slice(0, 300) + '...')  // render a short markdown preview
+        content_html: marked.parse(linkifyMentions(thread.content.slice(0, 300) + '...'))
       };
     });
 
@@ -122,6 +126,9 @@ router.get("/threads/:id", async (req, res) => {
       thread.title = "[Deleted by staff]";
       thread.content = "[Deleted by staff]";
       thread.username = "[Deleted]";
+      thread.content_html = marked.parse(linkifyMentions(thread.content));
+    } else {
+      thread.content_html = marked.parse(linkifyMentions(thread.content));
     }
 
     res.json({ thread });
@@ -131,6 +138,80 @@ router.get("/threads/:id", async (req, res) => {
   }
 });
 
+// Full-text forum thread search
+router.get("/search", async (req, res) => {
+  res.set("Cache-Control", "no-store");
+  const { q, category } = req.query;
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const offset = (page - 1) * limit;
+
+  if (!q || typeof q !== "string") {
+    return res.status(400).json({ error: "Missing search query" });
+  }
+
+  try {
+    const searchTerm = `%${q}%`;
+    const params = [searchTerm, searchTerm];
+    const countParams = [searchTerm, searchTerm];
+    let categoryFilter = "";
+
+    let categoryId = null;
+    if (category) {
+      const [[cat]] = await db.query("SELECT id FROM forum_categories WHERE slug = ?", [category]);
+      if (!cat) return res.status(404).json({ error: "Category not found" });
+      categoryId = cat.id;
+      categoryFilter = " AND t.category_id = ?";
+      params.push(categoryId);
+      countParams.push(categoryId);
+    }
+
+    const [contentMatches] = await db.query(`
+      SELECT 
+        t.id, t.title, t.content, t.created_at,
+        t.category_id, t.is_sticky,
+        u.username, c.slug AS category_slug,
+        COALESCE(SUM(CASE 
+          WHEN r.reaction = 'upvote' THEN 1
+          WHEN r.reaction = 'downvote' THEN -1
+          ELSE 0
+        END), 0) AS reputation
+      FROM forum_threads t
+      JOIN users u ON t.user_id = u.uuid
+      JOIN forum_categories c ON t.category_id = c.id
+      LEFT JOIN forum_reactions r ON t.id = r.post_id
+      WHERE t.deleted = FALSE AND (t.title LIKE ? OR t.content LIKE ?)
+      ${categoryFilter}
+      GROUP BY t.id
+      ORDER BY t.created_at DESC
+      LIMIT ? OFFSET ?
+    `, [...params, limit, offset]);
+
+    const [[{ count }]] = await db.query(`
+      SELECT COUNT(*) as count
+      FROM forum_threads t
+      WHERE t.deleted = FALSE AND (t.title LIKE ? OR t.content LIKE ?)
+      ${category ? " AND t.category_id = ?" : ""}
+    `, countParams);
+
+    const [userMatches] = await db.query(`
+      SELECT uuid, username FROM users WHERE username LIKE ?
+    `, [`%${q}%`]);
+
+    const threads = contentMatches.map((thread) => ({
+      ...thread,
+      content_html: marked.parse(linkifyMentions(thread.content.slice(0, 300) + '...')),
+    }));
+
+    res.json({ threads, users: userMatches, total: count });
+  } catch (err) {
+    console.error("Error in search:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+
+// GET replies
 router.get("/threads/:id/replies", async (req, res) => {
   const threadId = req.params.id;
   const page = parseInt(req.query.page) || 1;
@@ -154,7 +235,11 @@ router.get("/threads/:id/replies", async (req, res) => {
           reply.content = "[Deleted by staff]";
           reply.username = "[Deleted]";
         }
-        return { ...reply, children };
+        return {
+          ...reply,
+          content_html: marked.parse(linkifyMentions(reply.content)),
+          children,
+        };
       })
     );
 
@@ -190,6 +275,7 @@ router.get("/threads/:id/replies/:parentId", async (req, res) => {
     if (parent.deleted) {
       parent.content = "[Deleted by staff]";
       parent.username = "[Deleted]";
+      parent.content_html = marked.parse(linkifyMentions(parent.content));
     }
 
     const replyTree = await getReplyTree(threadId, Number(parentId));
@@ -244,6 +330,21 @@ router.get("/auth/upload-token", authMiddleware, (req, res) => {
   res.json({ token });
 });
 
+// GET mentions (future for notifications)
+router.get("/:uuid", async (req, res) => {
+  const uuid = req.params.uuid;
+  const [rows] = await db.query(`
+    SELECT m.*, t.title AS thread_title
+    FROM mentions m
+    LEFT JOIN forum_threads t ON m.post_type = 'thread' AND m.post_id = t.id
+    WHERE m.mentioned_uuid = ?
+    ORDER BY m.created_at DESC
+    LIMIT 10
+  `, [uuid]);
+
+  res.json(rows);
+});
+
 router.post("/threads", authMiddleware, limitThreadPosts, async (req, res) => {
   const { title, content, category_id, is_sticky = false } = req.body;
   const userId = req.user.uuid;
@@ -271,17 +372,31 @@ router.post("/threads", authMiddleware, limitThreadPosts, async (req, res) => {
       [userId, filterBadWords(title), filterBadWords(content), category_id, is_sticky]
     );
 
+    const threadId = result.insertId;
+
+    // Extract and save mentions
+    const mentionedUsers = await extractMentions(content);
+
+    for (const user of mentionedUsers) {
+      await db.query(
+        `INSERT INTO mentions (post_type, post_id, mentioned_uuid)
+         VALUES (?, ?, ?)`,
+        ["thread", threadId, user.uuid]
+      );
+    }
+
     const [[{ slug }]] = await db.query(
       "SELECT slug FROM forum_categories WHERE id = ?",
       [category_id]
     );
     
-    res.status(201).json({ threadId: result.insertId, categorySlug: slug });
+    res.status(201).json({ threadId, categorySlug: slug });
   } catch (err) {
     console.error("Error creating thread:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
 
 router.post("/threads/:id/replies", authMiddleware, limitReplies, async (req, res) => {
   const { content, parent_id = null } = req.body;
@@ -298,12 +413,25 @@ router.post("/threads/:id/replies", authMiddleware, limitReplies, async (req, re
       VALUES (?, ?, ?, ?)
     `, [threadId, userId, filterBadWords(content), parent_id]);
 
+    const replyId = result.insertId;
+
+    // Extract and save mentions
+    const mentionedUsers = await extractMentions(content);
+
+    for (const user of mentionedUsers) {
+      await db.query(
+        `INSERT INTO mentions (post_type, post_id, mentioned_uuid)
+         VALUES (?, ?, ?)`,
+        ["reply", replyId, user.uuid]
+      );
+    }
+
     const [rows] = await db.query(`
       SELECT forum_posts.*, users.username
       FROM forum_posts
       JOIN users ON forum_posts.user_id = users.uuid
       WHERE forum_posts.id = ?
-    `, [result.insertId]);
+    `, [replyId]);
 
     res.status(201).json({ reply: rows[0] });
   } catch (err) {
