@@ -10,7 +10,7 @@ const CategoryThreadsPage = () => {
     <PageLayout fullWidth>
       <div className="max-w-5xl mx-auto py-16 px-4">
         <h1 className="text-3xl font-bold text-purple-400 mb-8 text-center">
-          Threads in {slug?.replace(/-/g, " ")}
+          Threads in {slug?.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
         </h1>
         <ForumSearchBar categorySlug={slug} />
         <ThreadsList categorySlug={slug} />
