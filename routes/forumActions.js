@@ -1,11 +1,12 @@
 import express from "express";
 import db from "../utils/db.js";
 import authMiddleware from "../middleware/authMiddleware.js";
+import { limitReactions, limitFlags } from "../utils/rateLimiter.js";
 
 const router = express.Router();
 
 // POST /api/forums/posts/:postId/react
-router.post("/posts/:postId/react", authMiddleware, async (req, res) => {
+router.post("/posts/:postId/react", authMiddleware, limitReactions, async (req, res) => {
   const { postId } = req.params;
   const { reaction } = req.body;
   const userId = req.user.uuid;
@@ -65,7 +66,7 @@ router.post("/posts/:postId/react", authMiddleware, async (req, res) => {
 });
 
 // POST /api/forums/posts/:postId/flag
-router.post("/posts/:postId/flag", authMiddleware, async (req, res) => {
+router.post("/posts/:postId/flag", authMiddleware, limitFlags, async (req, res) => {
   const { postId } = req.params;
   const { reason, details } = req.body;
   const userId = req.user.uuid;

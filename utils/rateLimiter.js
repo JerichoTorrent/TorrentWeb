@@ -46,3 +46,5 @@ function userLimit(type, windowSeconds = 10) {
 
 export const limitThreadPosts = userLimit("thread", 60);
 export const limitReplies = userLimit("reply", 10);
+export const limitReactions = userLimit("reaction", 1);
+export const limitFlags = userLimit("flag", 60);

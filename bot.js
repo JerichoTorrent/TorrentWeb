@@ -125,7 +125,9 @@ router.get("/auth/discord/callback", async (req, res) => {
     });
 
     const tokenData = await tokenRes.json();
-    if (!tokenData.access_token) throw new Error("Failed to get access token");
+    if (!tokenRes.ok || tokenData.error) {
+      throw new Error(tokenData.error_description || "Failed to get access token");
+    }
 
     const userRes = await fetch("https://discord.com/api/users/@me", {
       headers: { Authorization: `Bearer ${tokenData.access_token}` }

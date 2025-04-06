@@ -73,7 +73,8 @@ async function checkActivePunishment(uuid, username, type, discordId = null) {
     try {
       const result = await checkDiscordPunishment(discordId);
       return result?.active === true;
-    } catch {
+    } catch (err) {
+      console.error("Discord punishment check failed:", err);
       return false;
     }
   }
