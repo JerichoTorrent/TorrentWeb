@@ -61,15 +61,25 @@ router.use("/api/forums/upload-image", (req, res, next) => {
   }
 });
 
-// Static route to serve uploaded images
-router.use("/uploads/forum_images", express.static(UPLOAD_DIR));
+// Static route to serve uploaded images, secure headers
+router.use("/uploads/forum_images", express.static(UPLOAD_DIR, {
+  setHeaders: (res, _) => {
+    res.setHeader("Content-Security-Policy", "default-src 'none'");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Cache-Control", "public, max-age=31536000");
+  },
+}));
 
 // Upload endpoint
 router.post("/api/forums/upload-image", upload.single("image"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No image uploaded." });
 
   const fileUrl = `${process.env.BACKEND_URL}/uploads/forum_images/${req.file.filename}`;
-
+  const allowedMimes = ["image/jpeg", "image/png"];
+  if (!allowedMimes.includes(req.file.mimetype)) {
+    try { fs.unlinkSync(req.file.path); } catch (_) {}
+    return res.status(400).json({ error: "Invalid image type." });
+  }
   try {
     const modRes = await fetch("https://api.openai.com/v1/moderations", {
       method: "POST",
@@ -84,7 +94,7 @@ router.post("/api/forums/upload-image", upload.single("image"), async (req, res)
     const categories = result?.results?.[0]?.categories;
 
     if (categories?.sexual || categories?.violence || categories?.["violence/graphic"]) {
-      fs.unlinkSync(req.file.path);
+      try { fs.unlinkSync(req.file.path); } catch (_) {}
       return res.status(400).json({ error: "Image failed moderation check." });
     }
 
@@ -93,7 +103,7 @@ router.post("/api/forums/upload-image", upload.single("image"), async (req, res)
     const userId = decoded.uuid;
 
     await db.query(
-      `INSERT INTO forum_uploads (user_id, image_url, upload_time, last_accessed),
+      `INSERT INTO forum_uploads (user_id, image_url, upload_time, last_accessed)
       VALUES (?, ?, NOW(), NOW())`,
       [userId, fileUrl]
     );
@@ -101,7 +111,7 @@ router.post("/api/forums/upload-image", upload.single("image"), async (req, res)
     return res.json({ url: fileUrl });
   } catch (err) {
     console.error("Moderation error:", err);
-    fs.unlinkSync(req.file.path);
+    try { fs.unlinkSync(req.file.path); } catch (_) {}
     return res.status(500).json({ error: "Image moderation failed." });
   }
 });
