@@ -5,12 +5,13 @@ import { parseInline } from "marked";
 import DOMPurify from "dompurify";
 
 interface ThreadsListProps {
+  threads?: Thread[];
   categorySlug?: string;
-  disableStickies?: boolean; // 👈 added prop
+  disableStickies?: boolean;
 }
 
-const ThreadsList = ({ categorySlug, disableStickies = false }: ThreadsListProps) => {
-  const [threads, setThreads] = useState<Thread[]>([]);
+const ThreadsList = ({ threads: externalThreads, categorySlug, disableStickies = false }: ThreadsListProps) => {
+  const [threads, setThreads] = useState<Thread[]>(externalThreads || []);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -44,8 +45,15 @@ const ThreadsList = ({ categorySlug, disableStickies = false }: ThreadsListProps
   };
 
   useEffect(() => {
-    fetchThreads();
-  }, [page, categorySlug]);
+    if (!externalThreads || externalThreads.length === 0) {
+      fetchThreads();
+    } else {
+      // You must explicitly stop loading when using external threads
+      setThreads(externalThreads);
+      setTotal(externalThreads.length);
+      setLoading(false);
+    }
+  }, [externalThreads, page, categorySlug]);
 
   const totalPages = Math.ceil(total / limit);
 

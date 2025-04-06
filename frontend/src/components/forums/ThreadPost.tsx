@@ -8,9 +8,10 @@ type Props = {
   thread: Thread;
   onDeleteThread?: () => void;
   currentUserId?: string;
+  onReply: (id: number) => void;
 };
 
-const ThreadPost = ({ thread, onDeleteThread, currentUserId }: Props) => {
+const ThreadPost = ({ thread, onDeleteThread, currentUserId, onReply }: Props) => {
   const { user } = useContext(AuthContext);
   const isAuthor = currentUserId === thread.user_id;
 
@@ -113,7 +114,6 @@ const ThreadPost = ({ thread, onDeleteThread, currentUserId }: Props) => {
             ▼
           </button>
         </div>
-
         <div className="relative">
           <button
             onClick={() => setShowFlagMenu((prev) => !prev)}

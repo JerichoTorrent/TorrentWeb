@@ -50,7 +50,12 @@ const ThreadPage = () => {
         }
 
         setThread(threadData.thread);
-        setReplies(repliesData.replies || []);
+        setReplies(
+          (repliesData.replies || []).map((r: ReplyType) => ({
+            ...r,
+            children: r.children || [],
+          }))
+        );
         setTotalReplies(repliesData.total || 0);
         if (page === 1) {
           setLocalTopReplies([]);
@@ -202,10 +207,10 @@ const ThreadPage = () => {
     if (res.ok) {
       const removeReply = (list: ReplyType[]): ReplyType[] =>
         list
-          .filter((r) => r.id !== replyId)
-          .map((r) => ({
+          .filter((r: ReplyType) => r.id !== replyId)
+          .map((r: ReplyType) => ({
             ...r,
-            children: r.children ? removeReply(r.children) : r.children,
+            children: r.children ? removeReply(r.children) : [],
           }));
 
       setReplies((prev) => removeReply(prev));
@@ -254,6 +259,7 @@ const ThreadPage = () => {
               thread={thread}
               currentUserId={user?.uuid}
               onDeleteThread={handleDeleteThread}
+              onReply={() => {}}
             />
 
             {user && (

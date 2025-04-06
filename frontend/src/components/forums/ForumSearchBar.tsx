@@ -67,10 +67,8 @@ const ForumSearchBar = ({ categorySlug }: Props) => {
   };
 
   const handleUserSelect = (username: string) => {
-    const prefix = query.lastIndexOf("@");
-    const newQuery = query.substring(0, prefix + 1) + username + " ";
-    setQuery(newQuery);
-    setUserSuggestions([]);
+    navigate(`/dashboard/${username}`);
+    setShowDropdown(false);
   };
 
   return (

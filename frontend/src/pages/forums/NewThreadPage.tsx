@@ -2,6 +2,9 @@ import { useState, useEffect, FormEvent, useContext } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import AuthContext from "../../context/AuthContext";
 import PageLayout from "../../components/PageLayout";
+import { MentionsInput, Mention } from "react-mentions";
+import mentionStyle from "../../styles/mentionStyle";
+import debounce from "lodash.debounce";
 
 function useQuery() {
   return new URLSearchParams(useLocation().search);
@@ -31,6 +34,7 @@ const NewThreadPage = () => {
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
   const [uploadToken, setUploadToken] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<{ id: string; display: string }[]>([]);
 
   useEffect(() => {
     fetch("/api/forums/categories")
@@ -178,6 +182,26 @@ const NewThreadPage = () => {
     }
   };
 
+  const loadSuggestions = async (query: string) => {
+    try {
+      const res = await fetch(`/api/users/suggest?q=${query}`);
+      const users = await res.json();
+      if (Array.isArray(users)) {
+        const cleaned = users.filter((u) => u && typeof u === "object" && u.id && u.display);
+        setSuggestions(cleaned);
+      } else {
+        setSuggestions([]);
+      }
+    } catch (err) {
+      console.error("Mention fetch failed:", err);
+      setSuggestions([]);
+    }
+  };
+  
+  const loadSuggestionsDebounced = debounce((query: string) => {
+    loadSuggestions(query);
+  }, 300);
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
@@ -315,14 +339,38 @@ const NewThreadPage = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">Content</label>
-            <textarea
-              required
-              rows={8}
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              className="w-full rounded bg-[#1e1e22] border border-gray-700 p-3 text-white"
-              placeholder="Write your markdown post here..."
-            />
+              <MentionsInput
+                value={content}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setContent(value);
+
+                  const lastWord = value.split(/\s+/).pop() || "";
+                  if (lastWord.startsWith("@") && lastWord.length > 1) {
+                    loadSuggestionsDebounced(lastWord.slice(1));
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Tab") {
+                    e.preventDefault();
+                    const event = new KeyboardEvent("keydown", {
+                      key: "Enter",
+                      bubbles: true,
+                      cancelable: true,
+                    });
+                    e.currentTarget.dispatchEvent(event);
+                  }
+                }}
+                placeholder="Write your markdown post here..."
+                style={mentionStyle}
+                allowSuggestionsAboveCursor
+              >
+                <Mention
+                  trigger="@"
+                  data={suggestions}
+                  appendSpaceOnAdd
+                />
+              </MentionsInput>
           </div>
 
           {user.is_staff && (

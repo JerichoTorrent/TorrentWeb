@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef, useContext } from "react";
 import { Reply as ReplyType } from "../../types";
 import AuthContext from "../../context/AuthContext";
-import Markdown from "markdown-to-jsx";
+import { MentionsInput, Mention } from "react-mentions";
+import mentionStyle from "../../styles/mentionStyle";
+import debounce from "lodash.debounce";
 
 type ReplyProps = {
   reply: ReplyType;
@@ -38,6 +40,7 @@ const Reply = ({
   const [reputation, setReputation] = useState(0);
   const [showFlagMenu, setShowFlagMenu] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [suggestions, setSuggestions] = useState<{ id: string; display: string }[]>([]);
 
   useEffect(() => {
     const checkWidth = () => {
@@ -108,6 +111,26 @@ const Reply = ({
     }
   };
 
+  const loadSuggestions = async (query: string) => {
+    try {
+      const res = await fetch(`/api/users/suggest?q=${query}`);
+      const users = await res.json();
+      if (Array.isArray(users)) {
+        const cleaned = users.filter((u) => u && typeof u === "object" && u.id && u.display);
+        setSuggestions(cleaned);
+      } else {
+        setSuggestions([]);
+      }
+    } catch (err) {
+      console.error("Mention fetch failed:", err);
+      setSuggestions([]);
+    }
+  };
+  
+  const loadSuggestionsDebounced = debounce((query: string) => {
+    loadSuggestions(query);
+  }, 300);
+
   const effectiveDepth = Math.min(depth, maxDepth);
   const marginLeft = `${effectiveDepth * 12}px`;
 
@@ -135,12 +158,42 @@ const Reply = ({
           <>
             {isEditing ? (
               <>
-                <textarea
-                  className="w-full bg-[#121217] text-white border border-gray-700 rounded p-2 text-sm"
-                  rows={4}
-                  value={editedContent}
-                  onChange={(e) => setEditedContent(e.target.value)}
-                />
+                <MentionsInput
+                  value={replyInput}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setReplyInput(reply.id, value);
+
+                    const lastWord = value.split(/\s+/).pop() || "";
+                    if (lastWord.startsWith("@") && lastWord.length > 1) {
+                      loadSuggestionsDebounced(lastWord.slice(1));
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Tab") {
+                      e.preventDefault();
+                      const enterEvent = new KeyboardEvent("keydown", {
+                        key: "Enter",
+                        code: "Enter",
+                        bubbles: true,
+                        cancelable: true,
+                      });
+                      e.currentTarget.dispatchEvent(enterEvent);
+                    }
+                  }}
+                  style={mentionStyle}
+                  placeholder="Write your reply..."
+                  allowSuggestionsAboveCursor
+                  className="mb-2"
+                >
+                  <Mention
+                    trigger="@"
+                    data={suggestions}
+                    appendSpaceOnAdd
+                  />
+                </MentionsInput>
+
+
                 <div className="flex gap-2 mt-2">
                   <button
                     onClick={() => {

@@ -150,7 +150,12 @@ const ThreadBranchPage = () => {
         ) : thread && parentReply ? (
           <>
             <ForumSearchBar />
-            <ThreadPost thread={thread} currentUserId={user?.uuid} onDeleteThread={() => {}} />
+            <ThreadPost
+              thread={thread}
+              currentUserId={user?.uuid}
+              onDeleteThread={() => {}}
+              onReply={handleReply} // ← Add this
+            />
 
             <div className="mb-10">
               <ReplyTree
