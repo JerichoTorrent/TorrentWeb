@@ -70,6 +70,23 @@ const NewThreadPage = () => {
     getUploadToken();
   }, [user]);  
 
+  useEffect(() => {
+    if (!user?.token) return;
+  
+    const interval = setInterval(() => {
+      fetch("/api/forums/uploads/ping", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+        },
+      }).catch((err) => {
+        console.warn("Ping failed", err);
+      });
+    }, 5 * 60 * 1000); // every 5 minutes
+  
+    return () => clearInterval(interval); // cleanup on unmount
+  }, [user]);  
+
   const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedId = parseInt(e.target.value, 10);
     setCategoryId(selectedId);

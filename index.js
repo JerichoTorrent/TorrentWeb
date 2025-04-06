@@ -14,28 +14,29 @@ import forumRoutes from "./routes/forum.js";
 import forumActionsRoutes from "./routes/forumActions.js";
 import forumUploadRoutes from './routes/forumUpload.js';
 
-import db from "./utils/db.js"; // ✅ shared DB pool
+import db from "./utils/db.js"; // shared DB pool
 import blogRoutes from "./routes/blog.js";
 import bansRoutes from "./routes/bans.js";
 import appealsRoutes from "./routes/appeals.js";
 import authenticateToken from "./middleware/authMiddleware.js";
 import "./bot.js";
+import "./cron/scheduler.js";
 
 dotenv.config();
 
 const app = express();
-app.set("trust proxy", 1); // ✅ Trust Cloudflare's IP forwarding
+app.set("trust proxy", 1); // Trust Cloudflare's IP forwarding
 const PORT = process.env.PORT || 3000;
 const BACKEND_URL = process.env.BACKEND_URL;
 
-// ✅ ESM-safe __dirname
+// ESM-safe __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ✅ Static frontend path
+// Static frontend path
 const FRONTEND_BUILD_PATH = path.join(__dirname, "frontend", "dist");
 
-// ✅ Middleware
+// Middleware
 app.use(cors());
 app.use(express.json());
 app.use("/api/blog", blogRoutes);
@@ -48,7 +49,7 @@ app.use(forumUploadRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use(express.static(FRONTEND_BUILD_PATH));
 
-// ✅ Verify DB Connection
+// Verify DB Connection
 db.getConnection()
   .then(() => console.log("✅ Connected to MySQL Database"))
   .catch((err) => {
@@ -56,7 +57,7 @@ db.getConnection()
     process.exit(1);
   });
 
-// ✅ Config
+// Config
 const {
   JWT_SECRET,
   FRONTEND_URL,
@@ -72,7 +73,7 @@ if (!JWT_SECRET || !EMAIL_USER || !EMAIL_PASS || !EMAIL_SENDAS || !FRONTEND_URL)
   process.exit(1);
 }
 
-// ✅ Mailer
+// Mailer
 const transporter = nodemailer.createTransport({
   host: EMAIL_HOST,
   port: Number(EMAIL_PORT),
@@ -82,13 +83,13 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// ✅ UUID dash utility
+// UUID dash utility
 function insertUuidDashes(uuid) {
   if (!uuid || uuid.length !== 32) return uuid;
   return uuid.replace(/^(.{8})(.{4})(.{4})(.{4})(.{12})$/, "$1-$2-$3-$4-$5");
 }
 
-// ✅ Mojang UUID Fetcher
+// Mojang UUID Fetcher
 async function getMinecraftUUID(username) {
   const response = await fetch(`https://api.mojang.com/users/profiles/minecraft/${username}`);
   if (!response.ok) return null;
@@ -96,12 +97,12 @@ async function getMinecraftUUID(username) {
   return insertUuidDashes(data.id);
 }
 
-// ✅ API Status Check
+// API Status Check
 app.get("/api/status", (req, res) => {
   res.json({ message: "Torrent Network API is running!" });
 });
 
-// 🔹 Uptime / Metrics Ping
+// Uptime / Metrics Ping for UptimeKuma, HetrixTools, etc
 app.get("/api/metrics", (req, res) => {
   res.json({
     status: "ok",
@@ -113,7 +114,7 @@ app.get("/api/metrics", (req, res) => {
 
 const router = express.Router();
 
-// 🔹 Register
+// Register
 router.post("/auth/request-verification", async (req, res) => {
   const { username, email, password } = req.body;
   if (!username || !email || !password)
@@ -154,7 +155,7 @@ router.post("/auth/request-verification", async (req, res) => {
   }
 });
 
-// 🔹 Resend Verification
+// Resend Verification
 router.post("/auth/resend-verification", async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: "Email is required." });
@@ -186,7 +187,7 @@ router.post("/auth/resend-verification", async (req, res) => {
   }
 });
 
-// 🔹 Verify Email
+// Verify Email
 router.get("/auth/verify-email", async (req, res) => {
   const { token } = req.query;
   if (!token) return res.status(400).json({ error: "Missing token." });
@@ -215,7 +216,7 @@ router.get("/auth/verify-email", async (req, res) => {
   }
 });
 
-// 🔹 Login with rate limiter
+// Login with rate limiter
 router.post("/auth/login", rateLimiter(1, 5, "Too many login attempts. Try again soon."), async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password)
@@ -261,7 +262,7 @@ router.post("/auth/login", rateLimiter(1, 5, "Too many login attempts. Try again
   }
 });
 
-// 🔹 Forgot Password
+// Forgot Password
 router.post("/auth/forgot-password", async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: "Email is required." });
@@ -295,7 +296,7 @@ router.post("/auth/forgot-password", async (req, res) => {
   }
 });
 
-// 🔹 Reset Password
+// Reset Password
 router.post("/auth/reset-password", async (req, res) => {
   const { token, newPassword } = req.body;
   if (!token || !newPassword)
@@ -323,24 +324,24 @@ router.post("/auth/reset-password", async (req, res) => {
   }
 });
 
-// 🔐 Protected Route
+// Protected Route
 router.get("/protected", authenticateToken, (req, res) => {
   res.json({ message: `Welcome, ${req.user.username}!`, user: req.user });
 });
 
 app.use(router);
 
-// 🔹 Root API
+// Root API
 app.get("/api", (req, res) => {
   res.json({ message: "Torrent Network API is running!" });
 });
 
-// ✅ Production fallback for React routes
+// Production fallback for React routes
 app.get("*", (req, res) => {
   res.sendFile(path.join(FRONTEND_BUILD_PATH, "index.html"));
 });
 
-// ✅ Start Server
+// Start Server
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
 });
