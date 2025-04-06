@@ -1,10 +1,14 @@
-import { useEffect, useState, useContext } from "react";
+import { useEffect, useState, useContext, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import PageLayout from "../../components/PageLayout";
 import AuthContext from "../../context/AuthContext";
 import ReplyTree from "../../components/forums/ReplyTree";
 import ThreadPost from "../../components/forums/ThreadPost";
 import { Thread as ThreadType, Reply as ReplyType } from "../../types";
+import ForumSearchBar from "../../components/forums/ForumSearchBar";
+import { MentionsInput, Mention } from "react-mentions";
+import mentionStyle from "../../styles/mentionStyle";
+import debounce from "lodash.debounce";
 
 const ThreadPage = () => {
   const { id, categorySlug } = useParams<{ id: string; categorySlug: string }>();
@@ -18,6 +22,7 @@ const ThreadPage = () => {
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
   const [editingReplyId, setEditingReplyId] = useState<number | null>(null);
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
+  const [suggestions, setSuggestions] = useState<{ id: string; display: string }[]>([]);
 
   const [page, setPage] = useState(1);
   const [totalReplies, setTotalReplies] = useState(0);
@@ -47,7 +52,9 @@ const ThreadPage = () => {
         setThread(threadData.thread);
         setReplies(repliesData.replies || []);
         setTotalReplies(repliesData.total || 0);
-        setLocalTopReplies([]);
+        if (page === 1) {
+          setLocalTopReplies([]);
+        }
         setLoading(false);
       } catch (err: any) {
         setError(err.message);
@@ -83,22 +90,35 @@ const ThreadPage = () => {
           setTotalReplies((prev) => prev + 1);
         } else {
           setReplies((prev) => {
-            const insertNested = (replies: ReplyType[]): ReplyType[] =>
-              replies.map((r) => {
+            const insertNested = (replies: ReplyType[]): ReplyType[] => {
+              let found = false;
+          
+              const mapped = replies.map((r) => {
                 if (r.id === parentId) {
+                  found = true;
                   return {
                     ...r,
                     children: r.children ? [...r.children, data.reply] : [data.reply],
                   };
                 } else if (r.children) {
-                  return {
-                    ...r,
-                    children: insertNested(r.children),
-                  };
+                  const updatedChildren = insertNested(r.children);
+                  return { ...r, children: updatedChildren };
                 } else {
                   return r;
                 }
               });
+          
+              // if not found in current tree, add to top (temp fix)
+              if (!found && parentId) {
+                mapped.push({
+                  ...data.reply,
+                  children: [],
+                });
+              }
+          
+              return mapped;
+            };
+          
             return insertNested(prev);
           });
         }
@@ -147,6 +167,30 @@ const ThreadPage = () => {
     }
   };
 
+  const loadSuggestions = async (query: string) => {
+    try {
+      const res = await fetch(`/api/suggest?q=${query}`);
+      const users = await res.json();
+      if (Array.isArray(users)) {
+        const cleaned = users.filter(
+          (u) => u && typeof u === "object" && u.id && u.display
+        );
+        setSuggestions(cleaned);
+      } else {
+        setSuggestions([]);
+      }
+    } catch (err) {
+      console.error("❌ Mention fetch failed:", err);
+      setSuggestions([]);
+    }
+  };  
+
+  const loadSuggestionsDebounced = useCallback(
+    debounce((query: string) => {
+      loadSuggestions(query);
+    }, 300),
+    []
+  );  
   const handleDelete = async (replyId: number) => {
     if (!confirm("Are you sure you want to delete this reply?")) return;
 
@@ -205,7 +249,7 @@ const ThreadPage = () => {
           </div>
         ) : thread ? (
           <>
-
+            <ForumSearchBar categorySlug={categorySlug} />
             <ThreadPost
               thread={thread}
               currentUserId={user?.uuid}
@@ -213,22 +257,32 @@ const ThreadPage = () => {
             />
 
             {user && (
-              <div className="mb-10">
-                <textarea
+              <div className="w-full mb-6">
+                <MentionsInput
                   value={replyInputs["root"] || ""}
-                  onChange={(e) =>
-                    setReplyInputs((prev) => ({
-                      ...prev,
-                      root: e.target.value,
-                    }))
-                  }
-                  rows={5}
-                  className="w-full rounded bg-[#1e1e22] border border-gray-700 p-3 text-white mb-4"
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setReplyInputs((prev) => ({ ...prev, root: value }));
+
+                    const lastWord = value.split(/\s+/).pop() || "";
+                    if (lastWord.startsWith("@") && lastWord.length > 1) {
+                      loadSuggestionsDebounced(lastWord.slice(1));
+                    }
+                  }}
+                  style={mentionStyle}
                   placeholder="Write your reply..."
-                />
+                  allowSuggestionsAboveCursor
+                >
+                  <Mention
+                    trigger="@"
+                    data={suggestions}
+                    appendSpaceOnAdd
+                  />
+                </MentionsInput>
+
                 <button
                   onClick={() => handleSubmit(null)}
-                  className="bg-purple-600 text-white px-6 py-2 rounded hover:bg-purple-500 transition"
+                  className="mt-3 bg-purple-600 text-white px-6 py-2 rounded hover:bg-purple-500 transition"
                 >
                   Post Reply
                 </button>

@@ -92,7 +92,10 @@ const ThreadPost = ({ thread, onDeleteThread, currentUserId }: Props) => {
         on {new Date(thread.created_at).toLocaleString()}
       </p>
 
-      <Markdown className="mb-4 text-gray-300">{thread.content}</Markdown>
+      <div
+        className="mb-4 text-gray-300 whitespace-pre-wrap"
+        dangerouslySetInnerHTML={{ __html: thread.content_html }}
+      />
 
       <div className="flex flex-wrap items-center gap-4 text-sm mt-2">
         <div className="flex items-center gap-2">

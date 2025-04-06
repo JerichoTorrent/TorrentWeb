@@ -5,6 +5,7 @@ import ThreadPost from "../../components/forums/ThreadPost";
 import ReplyTree from "../../components/forums/ReplyTree";
 import AuthContext from "../../context/AuthContext";
 import { Thread, Reply } from "../../types";
+import ForumSearchBar from "../../components/forums/ForumSearchBar";
 
 const ThreadBranchPage = () => {
   const { id, parentId } = useParams<{ id: string; parentId: string }>();
@@ -148,6 +149,7 @@ const ThreadBranchPage = () => {
           </div>
         ) : thread && parentReply ? (
           <>
+            <ForumSearchBar />
             <ThreadPost thread={thread} currentUserId={user?.uuid} onDeleteThread={() => {}} />
 
             <div className="mb-10">

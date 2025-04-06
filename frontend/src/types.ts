@@ -1,4 +1,5 @@
 export type Thread = {
+  content_html: string | TrustedHTML;
   id: number;
   title: string;
   content: string;
@@ -12,6 +13,7 @@ export type Thread = {
 };
   
 export type Reply = {
+  content_html: string | TrustedHTML;
   edited: boolean;
   id: number;
   thread_id: number;

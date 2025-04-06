@@ -160,9 +160,10 @@ const Reply = ({
                 </div>
               </>
             ) : (
-              <Markdown className="text-gray-300 whitespace-pre-wrap">
-                {reply.content}
-              </Markdown>
+              <div
+                className="text-gray-300 whitespace-pre-wrap"
+                dangerouslySetInnerHTML={{ __html: reply.content_html || reply.content }}
+              />
             )}
 
             <div className="flex flex-wrap items-center gap-4 text-sm mt-2">

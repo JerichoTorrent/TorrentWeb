@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PageLayout from "../../components/PageLayout";
+import ForumSearchBar from "../../components/forums/ForumSearchBar";
 
 type Category = {
   id: number;
@@ -35,6 +36,7 @@ const ForumHomePage = () => {
     <PageLayout fullWidth>
       <div className="max-w-5xl mx-auto py-16 px-4">
         <h1 className="text-3xl font-bold text-purple-400 mb-8 text-center">Forums</h1>
+        <ForumSearchBar />
 
         {Object.keys(groups).length === 0 ? (
           <p className="text-center text-gray-500">No categories found.</p>
