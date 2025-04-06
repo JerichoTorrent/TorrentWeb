@@ -31,6 +31,7 @@ import CategoryThreadsPage from "./pages/forums/CategoryThreadsPage";
 import { JSX } from "react"; // ✅ Prevents JSX errors
 import ForumHomePage from "./pages/forums/ForumHomePage";
 import IndexPage from "./pages/forums/IndexPage";
+import VerifyError from "./pages/VerifyError";
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
@@ -71,6 +72,7 @@ function App() {
           <Route path="/forums/new-thread" element={<NewThreadPage />} />
           <Route path="/forums/category/:slug" element={<CategoryThreadsPage />} />
           <Route path="/forums/latest" element={<IndexPage />} />
+          <Route path="/verify-error" element={<VerifyError />} />
         </Routes>
       </Router>
     </AuthProvider>
