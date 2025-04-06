@@ -6,7 +6,7 @@ const IndexPage = () => {
     <PageLayout fullWidth>
       <div className="max-w-5xl mx-auto py-16 px-4">
         <h1 className="text-3xl font-bold text-purple-400 mb-8 text-center">Forum Threads</h1>
-        <ThreadsList />
+        <ThreadsList disableStickies/>
       </div>
     </PageLayout>
   );

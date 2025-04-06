@@ -6,9 +6,10 @@ import DOMPurify from "dompurify";
 
 interface ThreadsListProps {
   categorySlug?: string;
+  disableStickies?: boolean; // 👈 added prop
 }
 
-const ThreadsList = ({ categorySlug }: ThreadsListProps) => {
+const ThreadsList = ({ categorySlug, disableStickies = false }: ThreadsListProps) => {
   const [threads, setThreads] = useState<Thread[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -26,7 +27,14 @@ const ThreadsList = ({ categorySlug }: ThreadsListProps) => {
 
       const res = await fetch(url);
       const data = await res.json();
-      setThreads(data.threads || []);
+
+      const sortedThreads = disableStickies
+        ? (data.threads || []).sort(
+            (a: Thread, b: Thread) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          )
+        : data.threads || [];
+
+      setThreads(sortedThreads);
       setTotal(data.total || 0);
     } catch {
       setThreads([]);
@@ -65,49 +73,53 @@ const ThreadsList = ({ categorySlug }: ThreadsListProps) => {
       ) : (
         <>
           <div className="space-y-6 mb-10">
-            {threads.map((thread) => (
-              <div
-                key={thread.id}
-                className={`cursor-pointer rounded-lg p-6 hover:border-purple-500 transition border ${
-                  thread.is_sticky ? "bg-gray-900 border-gray-600" : "bg-[#1e1e22] border-gray-700"
-                }`}
-                onClick={() =>
-                  navigate(`/forums/category/${thread.category_slug}/thread/${thread.id}`, {
-                    state: { threadTitle: thread.title },
-                  })
-                }
-              >
-                <h2 className="text-xl font-semibold text-purple-300">
-                  {thread.is_sticky ? (
-                    <>
-                      <span className="mr-1">📌</span>
-                      {thread.title}
-                    </>
-                  ) : (
-                    thread.title
-                  )}
-                </h2>
-                <p className="text-gray-400 text-sm mt-2">
-                  by <span className="text-white">{thread.username}</span> ·{" "}
-                  {new Date(thread.created_at).toLocaleString()}
-                </p>
+            {threads.map((thread) => {
+              const isSticky = !disableStickies && thread.is_sticky;
+
+              return (
                 <div
-                  className="text-gray-300 text-sm mt-3 prose prose-invert max-w-none"
-                  dangerouslySetInnerHTML={{
-                    __html: DOMPurify.sanitize(
-                      parseInline((thread.content || "").slice(0, 400)) + "..."
-                    ),
-                  }}
-                ></div>
-                <div className="flex items-center gap-2 mt-2 text-sm text-gray-400">
-                  <span>
-                    {(thread.reputation ?? 0) > 0
-                      ? `+${thread.reputation ?? 0}`
-                      : thread.reputation ?? 0}
-                  </span>
+                  key={thread.id}
+                  className={`cursor-pointer rounded-lg p-6 hover:border-purple-500 transition border ${
+                    isSticky ? "bg-gray-900 border-gray-600" : "bg-[#1e1e22] border-gray-700"
+                  }`}
+                  onClick={() =>
+                    navigate(`/forums/category/${thread.category_slug}/thread/${thread.id}`, {
+                      state: { threadTitle: thread.title },
+                    })
+                  }
+                >
+                  <h2 className="text-xl font-semibold text-purple-300">
+                    {isSticky ? (
+                      <>
+                        <span className="mr-1">📌</span>
+                        {thread.title}
+                      </>
+                    ) : (
+                      thread.title
+                    )}
+                  </h2>
+                  <p className="text-gray-400 text-sm mt-2">
+                    by <span className="text-white">{thread.username}</span> ·{" "}
+                    {new Date(thread.created_at).toLocaleString()}
+                  </p>
+                  <div
+                    className="text-gray-300 text-sm mt-3 prose prose-invert max-w-none"
+                    dangerouslySetInnerHTML={{
+                      __html: DOMPurify.sanitize(
+                        parseInline((thread.content || "").slice(0, 400)) + "..."
+                      ),
+                    }}
+                  ></div>
+                  <div className="flex items-center gap-2 mt-2 text-sm text-gray-400">
+                    <span>
+                      {(thread.reputation ?? 0) > 0
+                        ? `+${thread.reputation ?? 0}`
+                        : thread.reputation ?? 0}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {totalPages > 1 && (
