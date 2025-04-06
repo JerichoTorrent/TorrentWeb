@@ -113,14 +113,6 @@ const ThreadPage = () => {
                 }
               });
           
-              // if not found in current tree, add to top (temp fix)
-              if (!found && parentId) {
-                mapped.push({
-                  ...data.reply,
-                  children: [],
-                });
-              }
-          
               return mapped;
             };
           
