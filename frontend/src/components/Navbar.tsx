@@ -51,7 +51,6 @@ const Navbar = () => {
             {forumsOpen && (
               <ul className="absolute top-full left-0 mt-2 bg-[#2a2a2e] text-sm rounded shadow-lg py-2 z-50">
                 <DropdownItem to="/forums">Forum Home</DropdownItem>
-                <DropdownItem to="/forums/categories">Categories</DropdownItem>
                 <DropdownItem to="/forums/latest">Latest Posts</DropdownItem>
                 <DropdownItem to="/forums/search">Search</DropdownItem>
               </ul>
@@ -106,7 +105,6 @@ const Navbar = () => {
           {[
             ["/", "Home"],
             ["/gamemodes", "Gamemodes"],
-            ["/leaderboards", "Leaderboards"],
             ["/rules", "Rules"],
             ["/forums", "Forums"],
             ["/vote", "Vote"],
