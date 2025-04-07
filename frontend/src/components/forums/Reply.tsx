@@ -159,16 +159,17 @@ const Reply = ({
             {isEditing ? (
               <>
                 <MentionsInput
-                  value={replyInput}
+                  value={editedContent}
                   onChange={(e) => {
                     const value = e.target.value;
-                    setReplyInput(reply.id, value);
+                    setEditedContent(value);
 
                     const lastWord = value.split(/\s+/).pop() || "";
                     if (lastWord.startsWith("@") && lastWord.length > 1) {
                       loadSuggestionsDebounced(lastWord.slice(1));
                     }
                   }}
+
                   onKeyDown={(e) => {
                     if (e.key === "Tab") {
                       e.preventDefault();

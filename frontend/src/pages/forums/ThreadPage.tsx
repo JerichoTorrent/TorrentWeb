@@ -73,9 +73,9 @@ const ThreadPage = () => {
   const handleSubmit = async (parentId: number | null = null) => {
     const inputKey = parentId ?? "root";
     if (!id || !replyInputs[inputKey]?.trim()) return;
-
+  
     try {
-      const res = await fetch(`/api/forums/threads/${id}/replies`, {
+      const postRes = await fetch(`/api/forums/threads/${id}/replies`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -86,80 +86,96 @@ const ThreadPage = () => {
           parent_id: parentId,
         }),
       });
-
-      const data = await res.json();
-
-      if (res.ok && data.reply) {
-        if (parentId === null) {
-          setLocalTopReplies((prev) => [data.reply, ...prev]);
-          setTotalReplies((prev) => prev + 1);
-        } else {
-          setReplies((prev) => {
-            const insertNested = (replies: ReplyType[]): ReplyType[] => {
-              let found = false;
-          
-              const mapped = replies.map((r) => {
-                if (r.id === parentId) {
-                  found = true;
-                  return {
-                    ...r,
-                    children: r.children ? [...r.children, data.reply] : [data.reply],
-                  };
-                } else if (r.children) {
-                  const updatedChildren = insertNested(r.children);
-                  return { ...r, children: updatedChildren };
-                } else {
-                  return r;
-                }
-              });
-          
-              return mapped;
-            };
-          
-            return insertNested(prev);
-          });
-        }
-
-        setReplyInputs((prev) => {
-          const copy = { ...prev };
-          delete copy[inputKey];
-          return copy;
-        });
-
-        setReplyingTo(null);
-      } else {
-        alert(data.error || "Failed to post reply.");
+  
+      if (!postRes.ok) {
+        const err = await postRes.json();
+        return alert(err.error || "Failed to post reply.");
       }
-    } catch {
+  
+      const postData = await postRes.json();
+  
+      // Fetch full reply with rendered markdown
+      const fullRes = await fetch(`/api/forums/replies/${postData.reply.id}`);
+      const contentType = fullRes.headers.get("content-type") || "";
+
+      if (!fullRes.ok || !contentType.includes("application/json")) {
+        const text = await fullRes.text();
+        console.error("❌ Invalid reply fetch response:", text);
+        return alert("Failed to fetch full reply.");
+      }
+
+      const { reply } = await fullRes.json();
+  
+      if (parentId === null) {
+        setLocalTopReplies((prev) => [reply, ...prev]);
+        setTotalReplies((prev) => prev + 1);
+      } else {
+        setReplies((prev) => {
+          const insertNested = (list: ReplyType[]): ReplyType[] =>
+            list.map((r) =>
+              r.id === parentId
+                ? {
+                    ...r,
+                    children: r.children ? [...r.children, reply] : [reply],
+                  }
+                : {
+                    ...r,
+                    children: r.children ? insertNested(r.children) : [],
+                  }
+            );
+  
+          return insertNested(prev);
+        });
+      }
+  
+      setReplyInputs((prev) => {
+        const copy = { ...prev };
+        delete copy[inputKey];
+        return copy;
+      });
+  
+      setReplyingTo(null);
+    } catch (err) {
+      console.error("Reply error:", err);
       alert("Failed to post reply.");
     }
-  };
+  };  
 
   const handleEdit = async (replyId: number, newContent: string) => {
-    const res = await fetch(`/api/forums/replies/${replyId}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${user?.token}`,
-      },
-      body: JSON.stringify({ content: newContent }),
-    });
-
-    if (res.ok) {
+    try {
+      const res = await fetch(`/api/forums/replies/${replyId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${user?.token}`,
+        },
+        body: JSON.stringify({ content: newContent }),
+      });
+  
+      if (!res.ok) {
+        const error = await res.json();
+        return alert(error.message || "Failed to update reply.");
+      }
+  
+      // Re-fetch full updated reply with rendered markdown
+      const replyRes = await fetch(`/api/forums/replies/${replyId}`);
+      const { reply } = await replyRes.json();
+  
       const updateReplies = (list: ReplyType[]): ReplyType[] =>
         list.map((r) =>
           r.id === replyId
-            ? { ...r, content: newContent }
+            ? reply
             : {
                 ...r,
                 children: r.children ? updateReplies(r.children) : r.children,
               }
         );
-
+  
       setReplies((prev) => updateReplies(prev));
       setLocalTopReplies((prev) => updateReplies(prev));
       setEditingReplyId(null);
-    } else {
+    } catch (err) {
+      console.error("Edit error:", err);
       alert("Failed to update reply.");
     }
   };

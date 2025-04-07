@@ -542,4 +542,40 @@ router.delete("/threads/:id", authMiddleware, async (req, res) => {
   }
 });
 
+// GET single reply by ID (used after posting or editing to fetch full reply w/ content_html)
+router.get("/replies/:id", async (req, res) => {
+  const replyId = req.params.id;
+
+  try {
+    const [rows] = await db.query(`
+      SELECT forum_posts.*, users.username
+      FROM forum_posts
+      JOIN users ON forum_posts.user_id = users.uuid
+      WHERE forum_posts.id = ?
+    `, [replyId]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Reply not found" });
+    }
+
+    const reply = rows[0];
+
+    if (reply.deleted) {
+      reply.content = "[Deleted by staff]";
+      reply.username = "[Deleted]";
+    }
+
+    res.json({
+      reply: {
+        ...reply,
+        content_html: marked.parse(linkifyMentions(reply.content)),
+        children: [],
+      }
+    });
+  } catch (err) {
+    console.error("Error fetching reply by ID:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 export default router;
