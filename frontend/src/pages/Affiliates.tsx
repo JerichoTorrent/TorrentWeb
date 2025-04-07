@@ -18,7 +18,7 @@ const Affiliates = () => {
         <div className="bg-[#1f1f1f] border border-[#2d2d34] rounded-lg shadow-lg p-6 space-y-12">
 
           {/* Brevex */}
-          <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+          <div className="flex flex-col md:flex-row items-center text-center md:text-left gap-6">
             <img src="/brevex.png" alt="Brevex Logo" className="h-32 md:h-20" />
             <div>
               <h2 className="text-xl font-semibold text-purple-300">Brevex Media & Design</h2>
@@ -43,7 +43,7 @@ const Affiliates = () => {
           <div className="border-t border-[#333]" />
 
           {/* Minehut */}
-          <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+          <div className="flex flex-col md:flex-row items-center text-center md:text-left gap-6">
             <img src="/minehut.png" alt="Minehut Logo" className="h-32 md:h-20" />
             <div>
               <h2 className="text-xl font-semibold text-purple-300">Minehut</h2>
@@ -78,7 +78,7 @@ const Affiliates = () => {
           <div className="border-t border-[#333]" />
 
           {/* TerraByteDev */}
-          <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+          <div className="flex flex-col md:flex-row items-center text-center md:text-left gap-6">
             <img src="/terrabytedev.png" alt="TerraByteDev Logo" className="h-32 md:h-20" />
             <div>
               <h2 className="text-xl font-semibold text-purple-300">TerraByteDev</h2>
