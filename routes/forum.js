@@ -8,8 +8,9 @@ import jwt from "jsonwebtoken";
 import { extractMentions, linkifyMentions } from "../utils/mentionParser.js";
 
 const router = express.Router();
+const FETCH_DEPTH_LIMIT = 50;
 
-async function getReplyTree(threadId, parentId = null, depth = 0, maxDepth = 10) {
+async function getReplyTree(threadId, parentId = null, depth = 0, maxDepth = FETCH_DEPTH_LIMIT) {
   if (depth >= maxDepth) return [];
 
   const query = `
@@ -24,7 +25,7 @@ async function getReplyTree(threadId, parentId = null, depth = 0, maxDepth = 10)
 
   const children = [];
   for (const row of rows) {
-    const nested = await getReplyTree(threadId, row.id, depth + 1, maxDepth);
+    const nested = await getReplyTree(threadId, row.id, depth + 1, maxDepth); // still depth-aware for safety
 
     if (row.deleted) {
       row.content = "[Deleted by staff]";

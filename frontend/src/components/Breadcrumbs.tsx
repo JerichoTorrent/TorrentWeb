@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 const Breadcrumbs = () => {
   const location = useLocation();
   const pathnames = location.pathname.split("/").filter(Boolean);
-  const ignoredSegments = new Set(["category", "thread"]);
+  const ignoredSegments = new Set(["category", "thread", "replies"]);
 
   const state = location.state as { threadTitle?: string; title?: string } | null;
   const threadTitle = state?.threadTitle;
@@ -14,7 +14,7 @@ const Breadcrumbs = () => {
     str.replace(/\b\w/g, (char) => char.toUpperCase());
 
   return (
-    <nav className="flex items-center text-xs text-gray-400">
+    <nav className="flex items-center text-xs text-gray-400" aria-label="Breadcrumb">
       <Link to="/" className="hover:text-yellow-400 transition">Home</Link>
       {pathnames.map((segment, index) => {
         if (ignoredSegments.has(segment)) return null;

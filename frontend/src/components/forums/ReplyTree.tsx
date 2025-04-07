@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Reply from "./Reply";
 import { Reply as ReplyType } from "../../types";
 
@@ -17,6 +18,8 @@ type Props = {
   setEditingReplyId: (id: number | null) => void;
   replyingTo: number | null;
   threadId: number;
+  categorySlug: string;
+  threadTitle: string;
 };
 
 const ReplyTree = ({
@@ -34,8 +37,11 @@ const ReplyTree = ({
   setEditingReplyId,
   replyingTo,
   threadId,
+  categorySlug,
+  threadTitle,
 }: Props) => {
   const [maxDepth, setMaxDepth] = useState(10);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const updateDepthLimit = () => {
@@ -52,8 +58,7 @@ const ReplyTree = ({
     <>
       {childReplies.map((reply) => {
         const children = reply.children ?? [];
-        const showMore = children.length > maxDepth;
-        const visibleChildren = children.slice(0, maxDepth);
+        const tooDeep = depth + 1 >= maxDepth;
 
         return (
           <div key={reply.id}>
@@ -72,8 +77,8 @@ const ReplyTree = ({
               setEditingId={setEditingReplyId}
             />
 
-            {depth < maxDepth &&
-              visibleChildren.map((child) => (
+            {!tooDeep &&
+              children.map((child) => (
                 <ReplyTree
                   key={child.id}
                   replies={[child]}
@@ -90,17 +95,21 @@ const ReplyTree = ({
                   setEditingReplyId={setEditingReplyId}
                   replyingTo={replyingTo}
                   threadId={threadId}
+                  categorySlug={categorySlug}
+                  threadTitle={threadTitle}
                 />
               ))}
 
-            {showMore && (
+            {tooDeep && children.length > 0 && (
               <div className="ml-4 mt-2">
-                <a
-                  href={`/forums/threads/${threadId}/replies/${reply.id}`}
+                <button
+                  onClick={() =>
+                    navigate(`/forums/category/${categorySlug}/thread/${threadId}/replies/${reply.id}`)
+                  }
                   className="text-sm text-purple-400 hover:underline"
                 >
-                  View {children.length - maxDepth} more replies
-                </a>
+                  → View {children.length} more repl{children.length > 1 ? "ies" : "y"}
+                </button>
               </div>
             )}
           </div>

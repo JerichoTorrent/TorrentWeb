@@ -328,6 +328,8 @@ const ThreadPage = () => {
               setEditingReplyId={setEditingReplyId}
               replyingTo={replyingTo}
               threadId={thread.id}
+              categorySlug={thread.category_slug}
+              threadTitle={thread.title}
             />
 
             {totalReplies > limit && (

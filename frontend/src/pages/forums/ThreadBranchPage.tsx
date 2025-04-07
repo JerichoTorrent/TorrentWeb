@@ -1,14 +1,21 @@
-import { useEffect, useState, useContext } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useEffect, useState, useContext, useCallback } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import PageLayout from "../../components/PageLayout";
 import ThreadPost from "../../components/forums/ThreadPost";
 import ReplyTree from "../../components/forums/ReplyTree";
 import AuthContext from "../../context/AuthContext";
-import { Thread, Reply } from "../../types";
 import ForumSearchBar from "../../components/forums/ForumSearchBar";
+import { MentionsInput, Mention } from "react-mentions";
+import mentionStyle from "../../styles/mentionStyle";
+import debounce from "lodash.debounce";
+import { Thread, Reply } from "../../types";
 
 const ThreadBranchPage = () => {
-  const { id, parentId } = useParams<{ id: string; parentId: string }>();
+  const { id, parentId, categorySlug = "" } = useParams<{
+    id: string;
+    parentId: string;
+    categorySlug?: string;
+  }>();
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
 
@@ -19,38 +26,56 @@ const ThreadBranchPage = () => {
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
   const [editingReplyId, setEditingReplyId] = useState<number | null>(null);
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
+  const [suggestions, setSuggestions] = useState<{ id: string; display: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchData = async () => {
-    try {
-      const threadRes = await fetch(`/api/forums/threads/${id}`);
-      if (!threadRes.ok) throw new Error("Thread not found");
-      const threadData = await threadRes.json();
-
-      const repliesRes = await fetch(`/api/forums/threads/${id}/replies/${parentId}`);
-      if (!repliesRes.ok) throw new Error("Replies not found");
-      const repliesData = await repliesRes.json();
-
-      setThread(threadData.thread);
-      setParentReply(repliesData.parent);
-      setChildReplies(repliesData.replies || []);
-      setLocalReplies([]);
-      setLoading(false);
-    } catch (err: any) {
-      setError(err.message);
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    const controller = new AbortController();
+  
+    const fetchData = async () => {
+      try {
+        const threadRes = await fetch(`/api/forums/threads/${id}`, { signal: controller.signal });
+        if (!threadRes.ok) throw new Error("Thread not found");
+        const threadData = await threadRes.json();
+  
+        const repliesRes = await fetch(`/api/forums/threads/${id}/replies/${parentId}`, { signal: controller.signal });
+        if (!repliesRes.ok) throw new Error("Replies not found");
+        const repliesData = await repliesRes.json();
+  
+        setThread(threadData.thread);
+        setParentReply(repliesData.parent);
+        setChildReplies(repliesData.replies || []);
+        setLocalReplies([]);
+        setLoading(false);
+      } catch (err: any) {
+        if (err.name !== "AbortError") {
+          setError(err.message || "Something went wrong");
+          setLoading(false);
+        }
+      }
+    };
+  
+    fetchData();
+  
+    return () => {
+      controller.abort();
+    };
+  }, [id, parentId]);  
 
   useEffect(() => {
-    if (!id || !parentId) return;
-    fetchData();
-  }, [id, parentId]);
+    if (thread?.title) {
+      navigate(location.pathname, {
+        replace: true,
+        state: { threadTitle: thread.title },
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [thread?.title]);
 
   const handleReply = (id: number) => {
     setReplyingTo(id);
-    setReplyInputs((prev) => ({ ...prev, [id]: "" }));
+    setReplyInputs((prev) => ({ ...prev, [id]: prev[id] ?? "" }));
   };
 
   const handleSubmitReply = async (replyToId: number) => {
@@ -67,20 +92,37 @@ const ThreadBranchPage = () => {
         body: JSON.stringify({ content, parent_id: replyToId }),
       });
 
-      const data = await res.json();
-
-      if (res.ok && data.reply) {
-        setLocalReplies((prev) => [data.reply, ...prev]);
-      } else {
-        alert(data.error || "Failed to post reply.");
+      if (!res.ok) {
+        const err = await res.json();
+        return alert(err.error || "Failed to post reply.");
       }
+
+      const { reply: posted } = await res.json();
+      const fullRes = await fetch(`/api/forums/replies/${posted.id}`);
+      const { reply } = await fullRes.json();
+
+      setChildReplies((prev) => {
+        const insertNested = (list: Reply[]): Reply[] =>
+          list.map((r) =>
+            r.id === replyToId
+              ? {
+                  ...r,
+                  children: r.children ? [...r.children, reply] : [reply],
+                }
+              : {
+                  ...r,
+                  children: r.children ? insertNested(r.children) : [],
+                }
+          );
+
+        return insertNested(prev);
+      });
 
       setReplyInputs((prev) => {
         const copy = { ...prev };
         delete copy[replyToId];
         return copy;
       });
-
       setReplyingTo(null);
     } catch {
       alert("Failed to post reply.");
@@ -107,7 +149,21 @@ const ThreadBranchPage = () => {
     });
 
     if (res.ok) {
-      fetchData();
+      const fullRes = await fetch(`/api/forums/replies/${id}`);
+      const { reply } = await fullRes.json();
+
+      setChildReplies((prev) => {
+        const update = (list: Reply[]): Reply[] =>
+          list.map((r) =>
+            r.id === id
+              ? reply
+              : {
+                  ...r,
+                  children: r.children ? update(r.children) : [],
+                }
+          );
+        return update(prev);
+      });
     } else {
       alert("Failed to update reply.");
     }
@@ -126,17 +182,36 @@ const ThreadBranchPage = () => {
     });
 
     if (res.ok) {
-      fetchData();
+      setChildReplies((prev) =>
+        prev.filter((r) => r.id !== id)
+      );
     } else {
       alert("Failed to delete reply.");
     }
   };
 
+  const loadSuggestions = async (query: string) => {
+    try {
+      const res = await fetch(`/api/suggest?q=${query}`);
+      const users = await res.json();
+      setSuggestions(Array.isArray(users) ? users : []);
+    } catch {
+      setSuggestions([]);
+    }
+  };
+
+  const loadSuggestionsDebounced = useCallback(
+    debounce((query: string) => {
+      loadSuggestions(query);
+    }, 300),
+    []
+  );
+
   return (
     <PageLayout fullWidth>
-      <div className="max-w-3xl mx-auto py-16 px-4">
+      <div className="w-full overflow-x-auto py-16 px-4">
         {loading ? (
-          <p className="text-center text-gray-400">Loading branch...</p>
+          <p className="text-center text-gray-400">Loading thread branch...</p>
         ) : error ? (
           <div className="text-center text-red-400">
             <p>❌ {error}</p>
@@ -149,46 +224,74 @@ const ThreadBranchPage = () => {
           </div>
         ) : thread && parentReply ? (
           <>
-            <ForumSearchBar />
+
+            <ForumSearchBar categorySlug={thread.category_slug} />
+
             <ThreadPost
               thread={thread}
               currentUserId={user?.uuid}
-              onDeleteThread={() => {}}
-              onReply={handleReply} // ← Add this
+              onDeleteThread={() => navigate(`/forums/category/${thread.category_slug}`)}
+              onReply={() => {}}
             />
 
-            <div className="mb-10">
-              <ReplyTree
-                replies={
-                  localReplies.length > 0
-                    ? [parentReply, ...localReplies, ...childReplies]
-                    : [parentReply, ...childReplies]
-                }
-                parentId={parentReply.id}
-                depth={0}
-                onReply={handleReply}
-                onSubmitReply={handleSubmitReply}
-                onCancelReply={handleCancelReply}
-                replyInputs={replyInputs}
-                setReplyInput={(id, value) =>
-                  setReplyInputs((prev) => ({ ...prev, [id]: value }))
-                }
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                editingReplyId={editingReplyId}
-                setEditingReplyId={setEditingReplyId}
-                replyingTo={replyingTo}
-                threadId={Number(id)}
-              />
-            </div>
+            {user && (
+              <div className="w-full mb-6">
+                <MentionsInput
+                  key={parentReply.id}
+                  value={replyInputs[parentReply.id] || ""}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setReplyInputs((prev) => ({ ...prev, [parentReply.id]: value }));
+
+                    const lastWord = value.split(/\s+/).pop() || "";
+                    if (lastWord.startsWith("@") && lastWord.length > 1) {
+                      loadSuggestionsDebounced(lastWord.slice(1));
+                    }
+                  }}
+                  style={mentionStyle}
+                  placeholder="Write your reply..."
+                  allowSuggestionsAboveCursor
+                >
+                  <Mention trigger="@" data={suggestions} appendSpaceOnAdd />
+                </MentionsInput>
+
+                <button
+                  onClick={() => handleSubmitReply(parentReply.id)}
+                  className="mt-3 bg-purple-600 text-white px-6 py-2 rounded hover:bg-purple-500 transition"
+                >
+                  Post Reply
+                </button>
+              </div>
+            )}
+
+            <ReplyTree
+              replies={[parentReply, ...childReplies]}
+              parentId={parentReply.id}
+              depth={0}
+              onReply={handleReply}
+              onSubmitReply={handleSubmitReply}
+              onCancelReply={handleCancelReply}
+              replyInputs={replyInputs}
+              setReplyInput={(id, value) =>
+                setReplyInputs((prev) => ({ ...prev, [id]: value }))
+              }
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              editingReplyId={editingReplyId}
+              setEditingReplyId={setEditingReplyId}
+              replyingTo={replyingTo}
+              threadId={Number(id)}
+              categorySlug={categorySlug}
+              threadTitle={thread.title}
+            />
 
             <div className="text-center mt-6">
-              <button
-                onClick={() => navigate(`/forums/threads/${id}`)}
+              <Link
+                to={`/forums/category/${thread.category_slug}/thread/${thread.id}`}
                 className="text-sm text-blue-400 hover:underline"
               >
-                ← See all replies
-              </button>
+                ← Go back to full thread
+              </Link>
             </div>
           </>
         ) : null}
