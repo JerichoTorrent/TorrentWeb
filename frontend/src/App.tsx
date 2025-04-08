@@ -34,6 +34,7 @@ import IndexPage from "./pages/forums/IndexPage";
 import VerifyError from "./pages/VerifyError";
 import SearchResultsPage from "./components/forums/SearchResultsPage";
 import ThreadBranchPage from "./pages/forums/ThreadBranchPage";
+import AccountPage from "./pages/AccountPage";
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
@@ -77,6 +78,7 @@ function App() {
           <Route path="/verify-error" element={<VerifyError />} />
           <Route path="/forums/search" element={<SearchResultsPage />} />
           <Route path="/forums/category/:categorySlug/thread/:id/replies/:parentId" element={<ThreadBranchPage />} />
+          <Route path="/dashboard/account" element={<AccountPage />} />
         </Routes>
       </Router>
     </AuthProvider>

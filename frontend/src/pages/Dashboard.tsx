@@ -18,7 +18,7 @@ const Dashboard = () => {
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
           {/* Minecraft avatar (placeholder for now) */}
           <img
-            src={`https://mineskin.eu/armor/body/${user?.username || "Steve"}/100`}
+            src={`https://mc-heads.net/avatar/${user?.username || "Steve"}`}
             alt="Player Avatar"
             className="w-24 h-24 rounded-lg border border-gray-600"
           />
@@ -71,13 +71,18 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Token Display */}
-        <div className="pt-6 border-t border-gray-700 text-center">
+        <div className="pt-6 border-t border-gray-700 flex flex-col sm:flex-row justify-center gap-4 text-center">
           <a
             href="/appeals/my"
-            className="inline-block bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-500 transition"
+            className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-500 transition"
           >
             View My Appeals
+          </a>
+          <a
+            href="/dashboard/account"
+            className="bg-yellow-400 text-black px-4 py-2 rounded hover:bg-purple-500 hover:text-white transition"
+          >
+            Your Account
           </a>
         </div>
       </div>

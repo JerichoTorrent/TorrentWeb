@@ -126,6 +126,15 @@ const Header = () => {
                     <button onClick={() => setOpen(false)} className="text-left hover:text-yellow-400">News feed</button>
                     <button onClick={() => setOpen(false)} className="text-right hover:text-yellow-400">Blocked</button>
                   </div>
+                  <button
+                    onClick={() => {
+                      navigate("/dashboard/account");
+                      setOpen(false);
+                    }}
+                    className="w-full text-left text-sm hover:text-yellow-400 mb-2"
+                  >
+                    Your Account
+                  </button>
                   <div className="border-t border-gray-700 my-3" />
                   <button
                     onClick={handleLogout}
