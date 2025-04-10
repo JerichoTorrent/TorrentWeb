@@ -39,7 +39,7 @@ module.exports = async function authenticateToken(req, res, next) {
       port: process.env.DB_PORT || 3306
     });
 
-    // ✅ Fetch is_staff field too
+    // Fetch is_staff field too
     const [rows] = await conn.execute(
       "SELECT username, discord_id, is_staff FROM users WHERE uuid = ?",
       [verified.uuid]
