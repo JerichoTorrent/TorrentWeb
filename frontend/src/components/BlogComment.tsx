@@ -95,7 +95,11 @@ const BlogComment = ({
         body: JSON.stringify({ reason }),
       });
       const data = await res.json();
-      if (!res.ok) alert(data.error || "Failed to flag.");
+      if (!res.ok) {
+        alert(data.error || "Failed to flag.");
+      } else {
+        alert("Thanks for flagging. We'll review this comment shortly.");
+      }
     } catch {
       alert("Error submitting flag.");
     }
@@ -115,11 +119,14 @@ const BlogComment = ({
   }, 300);
 
   return (
-    <div className="mb-3 relative" style={{ marginLeft }}>
+    <div
+      className={`relative ${depth === 0 ? "mt-6" : "mt-2"}`}
+      style={{ marginLeft }}
+    >
       <div className="border-l border-gray-600 pl-4">
         <p className="text-sm text-gray-400 mb-1">
           {comment.deleted ? (
-            <span className="italic text-gray-500">[Deleted content]</span>
+            <span className="italic text-gray-500 block py-2">[Deleted content]</span>
           ) : (
             <>
               <a href={`/dashboard/${comment.username}`} className="text-white hover:underline">
@@ -132,7 +139,7 @@ const BlogComment = ({
             </>
           )}
         </p>
-
+  
         {!comment.deleted && (
           <>
             {isEditing ? (
@@ -158,13 +165,13 @@ const BlogComment = ({
                       onEdit(comment.id, editedContent);
                       setEditingId(null);
                     }}
-                    className="px-3 py-1 bg-green-600 text-white text-sm rounded"
+                    className="px-3 bg-green-600 text-white text-sm rounded"
                   >
                     Save
                   </button>
                   <button
                     onClick={() => setEditingId(null)}
-                    className="px-3 py-1 bg-gray-700 text-white text-sm rounded"
+                    className="px-3 bg-gray-700 text-white text-sm rounded"
                   >
                     Cancel
                   </button>
@@ -173,10 +180,12 @@ const BlogComment = ({
             ) : (
               <div
                 className="text-gray-300 whitespace-pre-wrap"
-                dangerouslySetInnerHTML={{ __html: comment.content_html || comment.content }}
+                dangerouslySetInnerHTML={{
+                  __html: comment.content_html || comment.content,
+                }}
               />
             )}
-
+  
             <div className="flex flex-wrap items-center gap-4 text-sm mt-2">
               {user && !isEditing && (
                 <button onClick={() => onReply(comment.id)} className="text-blue-400 hover:underline">
@@ -185,25 +194,41 @@ const BlogComment = ({
               )}
               {(user?.uuid === comment.user_id || user?.is_staff) && !isEditing && (
                 <>
-                  <button onClick={() => {
-                    setEditingId(comment.id);
-                    setEditedContent(comment.content);
-                  }} className="text-yellow-400 hover:underline">
+                  <button
+                    onClick={() => {
+                      setEditingId(comment.id);
+                      setEditedContent(comment.content);
+                    }}
+                    className="text-yellow-400 hover:underline"
+                  >
                     Edit
                   </button>
-                  <button onClick={() => onDelete(comment.id)} className="text-red-500 hover:underline">
+                  <button
+                    onClick={() => onDelete(comment.id)}
+                    className="text-red-500 hover:underline"
+                  >
                     Delete
                   </button>
                 </>
               )}
               <div className="flex items-center gap-2">
-                <button onClick={() => handleReaction("upvote")} className="text-green-400 hover:underline">▲</button>
+                <button
+                  onClick={() => handleReaction("upvote")}
+                  className="text-green-400 hover:underline"
+                >
+                  ▲
+                </button>
                 <span className="text-gray-400">{reputation}</span>
-                <button onClick={() => handleReaction("downvote")} className="text-red-400 hover:underline">▼</button>
+                <button
+                  onClick={() => handleReaction("downvote")}
+                  className="text-red-400 hover:underline"
+                >
+                  ▼
+                </button>
               </div>
               <div className="relative">
                 <button
-                  onClick={() => setShowFlagMenu(prev => !prev)}
+                  onClick={() => setShowFlagMenu((prev) => !prev)}
                   className="text-sm text-gray-400 hover:underline"
                 >
                   🚩 Flag
@@ -230,7 +255,7 @@ const BlogComment = ({
                 )}
               </div>
             </div>
-
+  
             {isReplying && (
               <div className="mt-3">
                 <textarea
@@ -244,7 +269,7 @@ const BlogComment = ({
                 <div className="flex gap-2">
                   <button
                     onClick={() => onSubmitReply(comment.id)}
-                    className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-500 transition"
+                    className="px-4 bg-purple-600 text-white rounded hover:bg-purple-500 transition"
                   >
                     Post Reply
                   </button>
@@ -261,7 +286,7 @@ const BlogComment = ({
         )}
       </div>
     </div>
-  );
-};
+  );  
+};  
 
 export default BlogComment;

@@ -7,6 +7,8 @@ import { fileURLToPath } from "url";
 import { dirname } from "path";
 import db from "../utils/db.js";
 import authenticateToken from "../middleware/authMiddleware.js";
+import { filterBadWords } from "../utils/filterBadWords.js";
+import { limitReplies, limitFlags } from "../utils/rateLimiter.js";
 
 const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
@@ -224,7 +226,7 @@ router.get("/comments/:slug", async (req, res) => {
       `,
       [slug, perPage, offset]
     );
-    comments.forEach(c => {
+    replies.forEach(c => {
       try {
         c.reactions = JSON.parse(c.reaction_map || '{}');
       } catch {
@@ -259,7 +261,7 @@ router.get("/comments/:slug", async (req, res) => {
 });
 
 // POST /api/blog/:slug/comments | Create comment
-router.post("/:slug/comments", authenticateToken, async (req, res) => {
+router.post("/:slug/comments", authenticateToken, limitReplies, async (req, res) => {
   const { slug } = req.params;
   const { content, parent_id } = req.body;
   const uuid = req.user?.uuid;
@@ -270,9 +272,13 @@ router.post("/:slug/comments", authenticateToken, async (req, res) => {
   }
 
   try {
+    const clean = filterBadWords(content.trim());
+    const html = marked.parse(clean);
+
     await db.query(
-      `INSERT INTO blog_comments (post_slug, uuid, username, content, parent_id) VALUES (?, ?, ?, ?, ?)`,
-      [slug, uuid, username, content.trim(), parent_id || null]
+      `INSERT INTO blog_comments (post_slug, uuid, username, content, content_html, parent_id)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [slug, uuid, username, clean, html, parent_id || null]
     );
     res.json({ success: true });
   } catch (err) {
@@ -292,18 +298,21 @@ router.put("/comments/:id", authenticateToken, async (req, res) => {
   }
 
   try {
+    const clean = filterBadWords(content.trim());
+    const html = marked.parse(clean);
+
     const [result] = await db.query(
       `UPDATE blog_comments
-       SET content = ?, edited_at = NOW()
+       SET content = ?, content_html = ?, edited_at = NOW()
        WHERE id = ? AND uuid = ? AND deleted = 0`,
-      [content.trim(), id, uuid]
+      [clean, html, id, uuid]
     );
 
     if (result.affectedRows === 0) {
       return res.status(403).json({ error: "You cannot edit this comment." });
     }
 
-    res.json({ success: true });
+    res.json({ id, content: clean, content_html: html, edited: true });
   } catch (err) {
     console.error("❌ Comment edit error:", err);
     res.status(500).json({ error: "Failed to edit comment." });
@@ -418,6 +427,32 @@ router.post("/:slug/react", authenticateToken, async (req, res) => {
   } catch (err) {
     console.error("❌ Blog post reaction error:", err);
     res.status(500).json({ error: "Failed to react to post." });
+  }
+});
+
+// POST /api/blog/comments/:id/flag
+router.post("/comments/:id/flag", authenticateToken, limitFlags, async (req, res) => {
+  const { id } = req.params;
+  const { reason } = req.body;
+  const uuid = req.user?.uuid;
+
+  if (!uuid || !reason) {
+    return res.status(400).json({ error: "Missing user or reason." });
+  }
+
+  try {
+    await db.query(
+      `INSERT INTO blog_flags (comment_id, user_uuid, reason)
+       VALUES (?, ?, ?)`,
+      [id, uuid, reason]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    if (err.code === "ER_DUP_ENTRY") {
+      return res.status(400).json({ error: "You’ve already flagged this comment." });
+    }
+    console.error("❌ Flag comment error:", err);
+    res.status(500).json({ error: "Failed to flag comment." });
   }
 });
 

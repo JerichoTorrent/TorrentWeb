@@ -88,11 +88,9 @@ const BlogPostPage = () => {
 
       if (res.ok) {
         const newComment = await res.json();
-        // Refresh all comments
-        const fresh = await fetch(`/api/blog/comments/${slug}`).then(r => r.json());
-        setComments([...fresh.comments, ...fresh.replies]);
-        setReplyInputs((prev) => ({ ...prev, [parentId]: "" }));
+        await refreshComments();
         setReplyingTo(null);
+        setReplyInputs((prev) => ({ ...prev, [parentId]: "" }));
       } else {
         const err = await res.json();
         alert(err.error || "Failed to post reply.");
@@ -114,8 +112,7 @@ const BlogPostPage = () => {
       });
 
       if (res.ok) {
-        const fresh = await fetch(`/api/blog/comments/${slug}`).then(r => r.json());
-        setComments([...fresh.comments, ...fresh.replies]);
+        await refreshComments();
         setEditingId(null);
       } else {
         const err = await res.json();
@@ -139,8 +136,9 @@ const BlogPostPage = () => {
       });
 
       if (res.ok) {
-        const fresh = await fetch(`/api/blog/comments/${slug}`).then(r => r.json());
-        setComments([...fresh.comments, ...fresh.replies]);
+        await refreshComments();
+        if (editingId === id) setEditingId(null);
+        if (replyingTo === id) setReplyingTo(null);
       } else {
         const err = await res.json();
         alert(err.error || "Failed to delete comment.");
@@ -170,6 +168,20 @@ const BlogPostPage = () => {
       </div>
     );
   }
+
+  const refreshComments = async () => {
+    const pagesToFetch = Array.from({ length: currentPage }, (_, i) => i + 1);
+    const allComments: any[] = [];
+  
+    for (const pageNum of pagesToFetch) {
+      const res = await fetch(`/api/blog/comments/${slug}?page=${pageNum}`);
+      const data = await res.json();
+      const pageComments = [...(data.comments || []), ...(data.replies || [])];
+      allComments.push(...pageComments);
+    }
+  
+    setComments(allComments);
+  };  
 
   const loadMoreComments = async () => {
     if (currentPage >= totalPages) return;
