@@ -25,3 +25,16 @@ export type Reply = {
   children?: Reply[];
   deleted?: boolean;
 };
+
+export interface CommentType {
+  id: number;
+  content: string;
+  content_html?: string;
+  user_id: string;
+  username: string;
+  created_at: string;
+  edited?: boolean;
+  deleted?: boolean;
+  reactions?: Record<string, number>;
+  parent_id?: number | null;
+}

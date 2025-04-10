@@ -1,6 +1,9 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import PageLayout from "../components/PageLayout";
+import BlogPostReactions from "../components/BlogPostReactions";
+import BlogCommentTree from "../components/BlogCommentTree";
+import AuthContext from "../context/AuthContext";
 
 interface TocItem {
   text: string;
@@ -9,6 +12,7 @@ interface TocItem {
 }
 
 interface BlogPost {
+  reactions: Record<string, number>;
   title: string;
   date: string;
   slug: string;
@@ -21,9 +25,15 @@ interface BlogPost {
 const BlogPostPage = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
 
   const [post, setPost] = useState<BlogPost | null>(null);
   const [error, setError] = useState(false);
+
+  const [comments, setComments] = useState<any[]>([]);
+  const [replyInputs, setReplyInputs] = useState<Record<number, string>>({});
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [replyingTo, setReplyingTo] = useState<number | null>(null);
 
   useEffect(() => {
     fetch(`/api/blog/${slug}`)
@@ -35,10 +45,113 @@ const BlogPostPage = () => {
       .catch(() => setError(true));
   }, [slug]);
 
+  useEffect(() => {
+    if (slug) {
+      fetch(`/api/blog/comments/${slug}`)
+        .then(res => res.json())
+        .then(data => {
+          const all = [...(data.comments || []), ...(data.replies || [])];
+          setComments(all);
+        });
+    }
+  }, [slug]);
+
+  const handleReply = (id: number) => {
+    setReplyingTo(id);
+  };
+
+  const handleCancelReply = () => {
+    setReplyingTo(null);
+  };
+
+  const handleSubmitReply = async (parentId: number) => {
+    const content = replyInputs[parentId];
+    if (!content || !content.trim()) return;
+  
+    try {
+      const res = await fetch(`/api/blog/${slug}/comments`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${user?.token}`,
+        },
+        body: JSON.stringify({ 
+          content, 
+          parent_id: parentId === 0 ? null : parentId
+        }),
+      });
+
+      if (res.ok) {
+        const newComment = await res.json();
+        // Refresh all comments
+        const fresh = await fetch(`/api/blog/comments/${slug}`).then(r => r.json());
+        setComments([...fresh.comments, ...fresh.replies]);
+        setReplyInputs((prev) => ({ ...prev, [parentId]: "" }));
+        setReplyingTo(null);
+      } else {
+        const err = await res.json();
+        alert(err.error || "Failed to post reply.");
+      }
+    } catch (err) {
+      console.error("Reply error:", err);
+    }
+  };
+
+  const handleEdit = async (id: number, newContent: string) => {
+    try {
+      const res = await fetch(`/api/blog/comments/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${user?.token}`,
+        },
+        body: JSON.stringify({ content: newContent }),
+      });
+
+      if (res.ok) {
+        const fresh = await fetch(`/api/blog/comments/${slug}`).then(r => r.json());
+        setComments([...fresh.comments, ...fresh.replies]);
+        setEditingId(null);
+      } else {
+        const err = await res.json();
+        alert(err.error || "Failed to edit comment.");
+      }
+    } catch (err) {
+      console.error("Edit error:", err);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    const confirmDelete = confirm("Are you sure you want to delete this comment?");
+    if (!confirmDelete) return;
+
+    try {
+      const res = await fetch(`/api/blog/${slug}/comments/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${user?.token}`,
+        },
+      });
+
+      if (res.ok) {
+        const fresh = await fetch(`/api/blog/comments/${slug}`).then(r => r.json());
+        setComments([...fresh.comments, ...fresh.replies]);
+      } else {
+        const err = await res.json();
+        alert(err.error || "Failed to delete comment.");
+      }
+    } catch (err) {
+      console.error("Delete error:", err);
+    }
+  };
+
+  const setReplyInput = (id: number, value: string) => {
+    setReplyInputs((prev) => ({ ...prev, [id]: value }));
+  };
+
   if (error) {
     return (
       <div className="min-h-screen bg-black text-white">
-        {/* You can wrap this in <PageLayout> too if you want consistent header/nav */}
         <div className="max-w-3xl mx-auto px-6 py-20 text-center">
           <h1 className="text-4xl font-bold text-red-500 mb-4">404 - Post Not Found</h1>
           <p className="text-gray-400 mb-4">The blog post you’re looking for doesn’t exist.</p>
@@ -115,6 +228,47 @@ const BlogPostPage = () => {
           {/* Tags */}
           <div className="mt-10 text-sm text-gray-500 italic">
             Tags: {Array.isArray(post.tags) ? post.tags.join(", ") : post.tags || "none"}
+          </div>
+          {/* Reactions */}
+          <BlogPostReactions slug={post.slug} initialReactions={post.reactions} />
+          {/* Comments Section */}
+          <div className="mt-12">
+            <h2 className="text-xl font-bold text-white mb-4">Comments</h2>
+            {user && (
+                <div className="mb-6">
+                  <h3 className="text-sm text-gray-300 mb-2">Leave a comment</h3>
+                  <textarea
+                    rows={4}
+                    className="w-full bg-[#1e1e22] text-white border border-gray-700 rounded p-2 text-sm mb-2"
+                    placeholder="Write your comment..."
+                    value={replyInputs[0] || ""}
+                    onChange={(e) => setReplyInput(0, e.target.value)}
+                  />
+                  <button
+                    onClick={() => handleSubmitReply(0)}
+                    className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-500 transition"
+                  >
+                    Post Comment
+                  </button>
+                </div>
+              )}
+            {comments.length > 0 ? (
+              <BlogCommentTree
+                comments={comments}
+                onReply={handleReply}
+                onSubmitReply={handleSubmitReply}
+                onCancelReply={handleCancelReply}
+                replyInputs={replyInputs}
+                setReplyInput={setReplyInput}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                editingId={editingId}
+                setEditingId={setEditingId}
+                replyingTo={replyingTo}
+              />
+            ) : (
+              <p className="text-gray-500 text-sm">No comments yet.</p>
+            )}
           </div>
         </div>
       </div>
