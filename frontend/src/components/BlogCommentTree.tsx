@@ -17,6 +17,8 @@ type BlogCommentTreeProps = {
   replyingTo: number | null;
 };
 
+const MAX_NEST_DEPTH = 3;
+
 const BlogCommentTree = ({
   comments,
   parentId = null,
@@ -33,19 +35,36 @@ const BlogCommentTree = ({
   replyingTo,
 }: BlogCommentTreeProps) => {
   const children = comments.filter((c) => c.parent_id === parentId);
+  const flattenReplies = (parentId: number): CommentType[] => {
+    const result: CommentType[] = [];
+    const queue = comments.filter((c) => c.parent_id === parentId);
+  
+    while (queue.length > 0) {
+      const current = queue.shift();
+      if (current) {
+        result.push(current);
+        const children = comments.filter((c) => c.parent_id === current.id);
+        queue.push(...children);
+      }
+    }
+  
+    return result;
+  };
 
   return (
     <>
       {children.map((comment) => {
         const nextDepth = depth + 1;
+        const cappedDepth = Math.min(depth, MAX_NEST_DEPTH);
         const nested = comments.filter((c) => c.parent_id === comment.id);
-        const tooDeep = nextDepth >= 3;
+        const shouldFlatten = depth >= MAX_NEST_DEPTH;
 
         return (
           <div key={comment.id}>
+            {/* Main comment */}
             <BlogComment
               comment={comment}
-              depth={depth}
+              depth={cappedDepth}
               onReply={onReply}
               onSubmitReply={onSubmitReply}
               onCancelReply={onCancelReply}
@@ -58,47 +77,42 @@ const BlogCommentTree = ({
               setEditingId={setEditingId}
             />
 
-            {/* Inline replies (if not too deep) */}
-            {!tooDeep &&
-              nested.map((child) => (
-                <BlogCommentTree
-                  key={child.id}
-                  comments={comments}
-                  parentId={child.parent_id}
-                  depth={nextDepth}
-                  onReply={onReply}
-                  onSubmitReply={onSubmitReply}
-                  onCancelReply={onCancelReply}
-                  replyInputs={replyInputs}
-                  setReplyInput={setReplyInput}
-                  onEdit={onEdit}
-                  onDelete={onDelete}
-                  editingId={editingId}
-                  setEditingId={setEditingId}
-                  replyingTo={replyingTo}
-                />
-              ))}
-
-            {/* Flatten all remaining replies inline if cap is hit */}
-            {tooDeep &&
-              nested.length > 0 &&
-              nested.map((child) => (
+            {/* Either recurse (if not too deep) or flatten children */}
+            {!shouldFlatten ? (
+              <BlogCommentTree
+                comments={comments}
+                parentId={comment.id}
+                depth={nextDepth}
+                onReply={onReply}
+                onSubmitReply={onSubmitReply}
+                onCancelReply={onCancelReply}
+                replyInputs={replyInputs}
+                setReplyInput={setReplyInput}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                editingId={editingId}
+                setEditingId={setEditingId}
+                replyingTo={replyingTo}
+              />
+            ) : (
+              flattenReplies(comment.id).map((flatChild) => (
                 <BlogComment
-                  key={child.id}
-                  comment={child}
-                  depth={3} // fixed depth for inline replies
+                  key={flatChild.id}
+                  comment={flatChild}
+                  depth={MAX_NEST_DEPTH}
                   onReply={onReply}
                   onSubmitReply={onSubmitReply}
                   onCancelReply={onCancelReply}
-                  replyInput={replyInputs[child.id] || ""}
+                  replyInput={replyInputs[flatChild.id] || ""}
                   setReplyInput={setReplyInput}
                   onEdit={onEdit}
                   onDelete={onDelete}
-                  isReplying={replyingTo === child.id}
-                  isEditing={editingId === child.id}
+                  isReplying={replyingTo === flatChild.id}
+                  isEditing={editingId === flatChild.id}
                   setEditingId={setEditingId}
                 />
-              ))}
+              ))
+            )}
           </div>
         );
       })}

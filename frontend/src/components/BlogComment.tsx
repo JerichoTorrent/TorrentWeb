@@ -43,7 +43,7 @@ const BlogComment = ({
   const [suggestions, setSuggestions] = useState<{ id: string; display: string }[]>([]);
 
   const effectiveDepth = Math.min(depth, 3);
-  const marginLeft = `${effectiveDepth * 12}px`;
+  const marginLeft = `${effectiveDepth * 24}px`;
 
   useEffect(() => {
     if (isReplying && textareaRef.current) {
@@ -52,7 +52,7 @@ const BlogComment = ({
   }, [isReplying]);
 
   useEffect(() => {
-    // Convert reactions object to net rep score (if needed)
+    // Convert reactions object to net rep score
     const up = comment.reactions?.upvote || 0;
     const down = comment.reactions?.downvote || 0;
     setReputation(up - down);
@@ -126,7 +126,9 @@ const BlogComment = ({
                 {comment.username}
               </a>{" "}
               · {new Date(comment.created_at).toLocaleString()}
-              {comment.edited && <span className="ml-2 italic text-gray-500">(edited)</span>}
+              {!!comment.edited && (
+                <span className="ml-2 italic text-gray-500">(edited)</span>
+              )}
             </>
           )}
         </p>
