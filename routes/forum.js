@@ -220,14 +220,20 @@ router.get("/threads/:id/replies", async (req, res) => {
   const offset = (page - 1) * limit;
 
   try {
+    const [[mainPost]] = await db.query(
+      "SELECT id FROM forum_posts WHERE thread_id = ? AND parent_id IS NULL ORDER BY created_at ASC LIMIT 1",
+      [threadId]
+    );
+
+    const mainPostId = mainPost?.id ?? 0;
     const [topReplies] = await db.query(`
       SELECT forum_posts.*, users.username
       FROM forum_posts
       JOIN users ON forum_posts.user_id = users.uuid
-      WHERE forum_posts.thread_id = ? AND forum_posts.parent_id IS NULL
+      WHERE forum_posts.thread_id = ? AND forum_posts.parent_id IS NULL AND forum_posts.id != ?
       ORDER BY forum_posts.created_at ASC
       LIMIT ? OFFSET ?
-    `, [threadId, limit, offset]);
+    `, [threadId, mainPostId, limit, offset]);
 
     const sanitizedReplies = await Promise.all(
       topReplies.map(async (reply) => {
@@ -374,6 +380,17 @@ router.post("/threads", authMiddleware, limitThreadPosts, async (req, res) => {
     );
 
     const threadId = result.insertId;
+
+    await db.query(
+      `INSERT INTO forum_posts (thread_id, user_id, content, content_html)
+       VALUES (?, ?, ?, ?)`,
+      [
+        threadId,
+        userId,
+        filterBadWords(content),
+        marked.parse(linkifyMentions(content))
+      ]
+    );
 
     // Extract and save mentions
     const mentionedUsers = await extractMentions(content);
