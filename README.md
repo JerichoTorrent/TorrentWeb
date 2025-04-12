@@ -127,77 +127,12 @@ So as you can see from the above, there's a bit of configuring to do. You will n
 - Create a [Discord bot](https://discord.com/developers/applications) and give it necessary permissions. This is required for the Discord preview in the header as well as the appeal system. All the logic is in bot.js, which is intended to run alongside your web app. Invite it to your server.
 - Create an R2 storage bucket. Be smart and turn on Cloudflare CSAM monitoring as well.
 
-Run the following commands in your MySQL server:
+Run the following commands in your in the project root:
 ```
-CREATE DATABASE <database_name>;
-USE <database_name>;
-CREATE TABLE users (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  uuid VARCHAR(36) NOT NULL UNIQUE,
-  username VARCHAR(16) NOT NULL,
-  email VARCHAR(255) UNIQUE,
-  password_hash VARCHAR(255),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  last_login TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
-  session_token VARCHAR(255) NULL
-);
-CREATE TABLE votes (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id INT NOT NULL,
-  site_name VARCHAR(255) NOT NULL,
-  vote_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
-CREATE TABLE forum_threads (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id VARCHAR(36) NOT NULL,
-  title VARCHAR(255) NOT NULL,
-  content TEXT NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users(uuid)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE
-);
-CREATE TABLE forum_posts (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  thread_id INT NOT NULL,
-  user_id VARCHAR(36) NOT NULL,
-  content TEXT NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (thread_id) REFERENCES forum_threads(id) ON DELETE CASCADE,
-  FOREIGN KEY (user_id) REFERENCES users(uuid) ON DELETE CASCADE
-);
-CREATE TABLE blog_comments (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  post_slug VARCHAR(255),
-  uuid VARCHAR(36), -- from auth system
-  username VARCHAR(16),
-  content TEXT,
-  parent_id INT, -- nullable
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-CREATE TABLE blog_reactions (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  post_slug VARCHAR(255),
-  uuid VARCHAR(36),
-  type ENUM('like', 'love', 'fire', 'laugh', 'wow'), -- emoji set
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-CREATE TABLE appeals (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  uuid VARCHAR(36) NOT NULL,
-  username VARCHAR(32) NOT NULL,
-  discord_id VARCHAR(32), -- nullable if not linked
-  type ENUM('minecraft-ban', 'minecraft-mute', 'discord') NOT NULL,
-  message TEXT NOT NULL,
-  files JSON, -- array of uploaded file URLs
-  status ENUM('pending', 'accepted', 'denied', 'modified') DEFAULT 'pending',
-  verdict_message TEXT, -- optional staff message
-  decided_by VARCHAR(32), -- username or staff ID
-  decided_at DATETIME,
-  created_at DATETIME NOT NULL,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
+mysql -u root -p
+CREATE DATABASE torrent CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+EXIT;
+mysql -u root -p torrent < torrent_schema.sql
 ```
 
 ### 4. Deployment  
