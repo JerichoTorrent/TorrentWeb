@@ -28,13 +28,14 @@ import AppealFormPage from "./pages/AppealFormPage";
 import ThreadPage from "./pages/forums/ThreadPage";
 import NewThreadPage from "./pages/forums/NewThreadPage";
 import CategoryThreadsPage from "./pages/forums/CategoryThreadsPage";
-import { JSX } from "react"; // ✅ Prevents JSX errors
+import { JSX } from "react"; // Prevents JSX errors
 import ForumHomePage from "./pages/forums/ForumHomePage";
 import IndexPage from "./pages/forums/IndexPage";
 import VerifyError from "./pages/VerifyError";
 import SearchResultsPage from "./components/forums/SearchResultsPage";
 import ThreadBranchPage from "./pages/forums/ThreadBranchPage";
 import AccountPage from "./pages/AccountPage";
+import PunishmentDetailsPage from "./pages/PunishmentDetailsPage";
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
@@ -79,6 +80,7 @@ function App() {
           <Route path="/forums/search" element={<SearchResultsPage />} />
           <Route path="/forums/category/:categorySlug/thread/:id/replies/:parentId" element={<ThreadBranchPage />} />
           <Route path="/dashboard/account" element={<AccountPage />} />
+          <Route path="/bans/list/:id" element={<PunishmentDetailsPage />} />
         </Routes>
       </Router>
     </AuthProvider>

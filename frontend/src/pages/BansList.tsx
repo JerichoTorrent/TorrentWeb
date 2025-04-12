@@ -204,15 +204,33 @@ const BanListPage = () => {
                     </div>
                   </div>
                   {type !== "kick" && (
-                    <span
-                      className={`text-xs px-3 py-1 rounded-full font-medium self-start sm:self-auto ${
-                        p.active
-                          ? "bg-green-700 text-green-200"
-                          : "bg-red-700 text-red-200"
-                      }`}
-                    >
-                      {p.active ? "Active" : "Inactive"}
-                    </span>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 self-start sm:self-auto">
+                      <span
+                        className={`text-xs px-3 py-1 rounded-full font-medium ${
+                          p.active
+                            ? "bg-green-700 text-green-200"
+                            : "bg-red-700 text-red-200"
+                        }`}
+                      >
+                        {p.active ? "Active" : "Inactive"}
+                      </span>
+                      <Link
+                          to={`/bans/list/${p.uuid}`}
+                          className="p-1 rounded hover:bg-purple-600 transition group"
+                          title="View full punishment"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-5 w-5 text-purple-400 group-hover:text-white transition"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12H3m0 0l4-4m-4 4l4 4m9 4h2a2 2 0 002-2V6a2 2 0 00-2-2h-2" />
+                          </svg>
+                        </Link>
+                    </div>
                   )}
                 </div>
               );

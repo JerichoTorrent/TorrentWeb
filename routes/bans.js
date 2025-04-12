@@ -162,7 +162,7 @@ router.get("/counts", async (req, res) => {
   }
 });
 
-// ✅ Discord link status check
+// Discord link status check
 router.get("/api/discord/check-link", requireAuth, async (req, res) => {
   try {
     const linked = !!req.user?.discordId;
@@ -176,6 +176,72 @@ router.get("/api/discord/check-link", requireAuth, async (req, res) => {
       .json({ linked });
   } catch (err) {
     console.error("❌ Discord check error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Punishment full view page
+router.get("/punishment/:id", async (req, res) => {
+  const { id } = req.params;
+  const tables = ["bans", "mutes", "kicks"];
+
+  try {
+    let row = null;
+    let type = null;
+
+    // Search in each punishment type
+    for (const t of tables) {
+      const [rows] = await pool.query(
+        `SELECT * FROM litebans_${t} WHERE uuid = ? ORDER BY time DESC LIMIT 1`,
+        [id]
+      );
+      if (rows.length > 0) {
+        row = rows[0];
+        type = t;
+        break;
+      }
+    }
+
+    if (!row) {
+      return res.status(404).json({ error: "Punishment not found." });
+    }
+
+    // Active logic — safe for binary/boolean
+    const rawActive = Buffer.isBuffer(row.active) ? row.active[0] : Number(row.active);
+    const untilMs = row.until === 0 ? null : new Date(row.until).getTime();
+    const isActive =
+      rawActive === 1 &&
+      (row.until === 0 || (untilMs && untilMs > Date.now()));
+
+    // Resolve player name
+    const [playerNameRow] = await pool.query(
+      `SELECT name FROM litebans_history WHERE uuid = ? ORDER BY date DESC LIMIT 1`,
+      [row.uuid]
+    );
+
+    // Resolve staff UUID (by name)
+    const [staffRows] = await pool.query(
+      `SELECT uuid FROM litebans_history WHERE name = ? ORDER BY date DESC LIMIT 1`,
+      [row.banned_by_name]
+    );
+    const staffUuid = staffRows[0]?.uuid || null;
+
+    // Respond with all required data
+    res.json({
+      type,
+      uuid: row.uuid,
+      name: playerNameRow[0]?.name || row.uuid,
+      staff: row.banned_by_name,
+      staff_uuid: staffUuid,
+      reason: stripColorCodes(row.reason),
+      date: new Date(row.time).getTime(),
+      expires: row.until === 0 ? null : untilMs,
+      active: isActive,
+      server: row.server_scope || "Global",
+      origin_server: row.server_origin || "Unknown",
+    });
+  } catch (err) {
+    console.error("❌ Full punishment fetch failed:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
