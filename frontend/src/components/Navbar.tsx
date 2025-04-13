@@ -104,7 +104,7 @@ const Navbar = () => {
         <ul className="flex flex-col items-center gap-4 text-base font-semibold">
           {[
             ["/", "Home"],
-            ["/gamemodes", "Gamemodes"],
+            ["/stats", "Stats"],
             ["/rules", "Rules"],
             ["/forums", "Forums"],
             ["/vote", "Vote"],
