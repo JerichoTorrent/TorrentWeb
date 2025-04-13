@@ -55,15 +55,13 @@ const PunishmentDetailsPage = () => {
           <div className="flex flex-col md:flex-row justify-around items-center gap-8">
             {/* Player */}
             <div className="flex flex-col items-center">
+              <h3 className="text-lg uppercase text-gray-400 mb-2 tracking-wider">Player</h3>
               <SkinViewerComponent uuid={data.uuid} flip={true} />
-              <p className="mt-2 text-white font-semibold">{data.name}</p>
+              <p className="mt-2 text-white font-semibold" title={`UUID: ${data.uuid}`}>{data.name}</p>
             </div>
 
             {/* Info */}
             <div className="text-center md:text-left space-y-2 max-w-xs">
-              <p className="text-gray-400 text-sm">
-                UUID: <span className="text-white break-all">{data.uuid}</span>
-              </p>
               <p className="text-gray-400 text-sm">
                 Server: <span className="text-white">{data.server}</span>
               </p>
@@ -76,28 +74,29 @@ const PunishmentDetailsPage = () => {
               <p className="text-gray-400 text-sm">
                 Expires: <span className="text-white">{data.expires ? new Date(data.expires).toLocaleString() : "Never"}</span>
               </p>
-              <span
-                className={`text-xs px-3 py-1 rounded-full font-medium inline-block mt-2 ${
-                  data.active ? "bg-green-700 text-green-200" : "bg-red-700 text-red-200"
-                }`}
-              >
-                {data.active ? "Active" : "Inactive"}
-              </span>
             </div>
 
             {/* Staff */}
             <div className="flex flex-col items-center">
+              <h3 className="text-lg uppercase text-gray-400 mb-2 tracking-wider">Staff</h3>
               <SkinViewerComponent uuid={data.staff_uuid || data.staff} flip={false} />
-              <p className="mt-2 text-white font-semibold">{data.staff}</p>
+              <p className="mt-2 text-white font-semibold" title={`UUID: ${data.staff_uuid || data.staff}`}>{data.staff}</p>
             </div>
           </div>
 
           {/* Reason */}
           <div>
             <h2 className="text-xl font-bold text-purple-300 mb-2">Reason</h2>
-            <p className="text-white bg-black/20 border border-gray-700 p-4 rounded whitespace-pre-line">
-              {data.reason}
-            </p>
+            <div className="flex items-center justify-between bg-black/20 border border-gray-700 p-4 rounded">
+              <p className="text-white whitespace-pre-line">{data.reason}</p>
+              <span
+                className={`text-xs px-3 py-1 rounded-full font-medium ${
+                  data.active ? "bg-green-700 text-green-200" : "bg-red-700 text-red-200"
+                }`}
+              >
+                {data.active ? "Active" : "Inactive"}
+              </span>
+            </div>
           </div>
         </div>
       </div>

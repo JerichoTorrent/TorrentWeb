@@ -33,6 +33,7 @@ CREATE TABLE users (
   created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
   verified TINYINT(1) DEFAULT 0,
   verification_token VARCHAR(255),
+  email_verified TINYINT(1) NOT NULL DEFAULT 0;
   token_expires_at DATETIME,
   reset_token VARCHAR(255),
   reset_token_expires_at DATETIME
