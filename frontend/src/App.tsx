@@ -36,6 +36,7 @@ import SearchResultsPage from "./components/forums/SearchResultsPage";
 import ThreadBranchPage from "./pages/forums/ThreadBranchPage";
 import AccountPage from "./pages/AccountPage";
 import PunishmentDetailsPage from "./pages/PunishmentDetailsPage";
+import ScrollToTop from "./components/ScrollToTop";
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
@@ -47,6 +48,7 @@ function App() {
   return (
     <AuthProvider>
       <Router>
+        <ScrollToTop />
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
