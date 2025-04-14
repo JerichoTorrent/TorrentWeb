@@ -37,6 +37,7 @@ import ThreadBranchPage from "./pages/forums/ThreadBranchPage";
 import AccountPage from "./pages/AccountPage";
 import PunishmentDetailsPage from "./pages/PunishmentDetailsPage";
 import ScrollToTop from "./components/ScrollToTop";
+import StatsPage from "./components/stats/Stats";
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
@@ -83,6 +84,7 @@ function App() {
           <Route path="/forums/category/:categorySlug/thread/:id/replies/:parentId" element={<ThreadBranchPage />} />
           <Route path="/dashboard/account" element={<AccountPage />} />
           <Route path="/bans/list/:id" element={<PunishmentDetailsPage />} />
+          <Route path="/stats" element={<StatsPage />} />
         </Routes>
       </Router>
     </AuthProvider>

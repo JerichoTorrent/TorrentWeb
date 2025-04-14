@@ -39,7 +39,7 @@ const Navbar = () => {
         {/* Centered Nav (desktop only) */}
         <ul className="hidden sm:flex flex-1 justify-center gap-10 items-center text-base font-semibold">
           <NavItem to="/">Home</NavItem>
-          <NavItem to="/gamemodes">Gamemodes</NavItem>
+          <NavItem to="/stats">Stats</NavItem>
           <NavItem to="/rules">Rules</NavItem>
           <li className="relative" ref={forumsRef}>
             <button

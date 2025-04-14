@@ -14,6 +14,7 @@ import forumRoutes from "./routes/forum.js";
 import forumActionsRoutes from "./routes/forumActions.js";
 import forumUploadRoutes from './routes/forumUpload.js';
 import usersRoutes from "./routes/users.js";
+import statsRoutes from "./routes/stats.js";
 
 import db from "./utils/db.js"; // shared DB pool
 import blogRoutes from "./routes/blog.js";
@@ -52,6 +53,7 @@ app.use("/api/forums", forumActionsRoutes);
 app.use(forumUploadRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/api/users", usersRoutes);
+app.use(statsRoutes);
 app.use(express.static(FRONTEND_BUILD_PATH));
 
 // Verify DB Connection
