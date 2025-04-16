@@ -15,6 +15,13 @@ const categories = [
   "main", "skills", "balance", "team", "jobs", "xp", "shops", "fish", "plots",
 ];
 
+const allowedCategories: Record<string, string[]> = {
+  survival: ["main", "skills", "balance", "team", "jobs", "xp", "shops", "fish"],
+  lifesteal: ["main", "skills", "balance", "team", "jobs", "xp", "fish"],
+  skyfactions: ["main", "skills", "balance", "jobs", "xp"],
+  creative: ["main", "plots"],
+};
+
 const categoryColumns: Record<string, { label: string; key: string }[]> = {
   main: [
     { label: "Player Kills", key: "player_kills" },
@@ -113,7 +120,7 @@ const StatLeaderboard: React.FC<Props> = ({ server, defaultCategory = "main" }) 
   return (
     <div className="bg-[#1e1e22] border border-gray-700 mt-4 rounded-xl overflow-hidden">
       <div className="flex flex-wrap gap-2 p-4">
-        {categories.map((cat) => (
+        {(allowedCategories[server] || []).map((cat) => (
           <button
             key={cat}
             onClick={() => {
