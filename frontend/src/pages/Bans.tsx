@@ -185,7 +185,7 @@ const BansPage = () => {
           ))}
         </div>
 
-        <h2 className="text-2xl font-bold text-purple-400 mb-6">Appeals</h2>
+        <h2 id="appeals" className="text-2xl font-bold text-purple-400 mb-6">Appeals</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {appealBoxes.map((appeal) => (
             <div key={appeal.type} onClick={() => handleAppealClick(appeal.type)} className="bg-[#1e1e22] p-6 rounded-lg border border-gray-700 hover:border-purple-500 transition cursor-pointer">

@@ -38,3 +38,84 @@ export interface CommentType {
   reactions?: Record<string, number>;
   parent_id?: number | null;
 }
+
+export interface PlayerMainStats {
+  username: string;
+  player_kills: number;
+  deaths: number;
+  ticks_played: number;
+  mob_kills: number;
+  blocks_mined: number;
+  blocks_placed: number;
+  fish_caught: number;
+  animals_bred: number;
+  raid_wins: number;
+  beds_slept: number;
+  villager_trades: number;
+  items_broken: number;
+  items_crafted: number;
+  walk_cm: number;
+  swim_cm: number;
+  climb_cm: number;
+  fly_cm: number;
+  fall_cm: number;
+  aviate_cm: number;
+  players_killed_entity: number;
+}
+
+export interface PlayerSkillStats {
+  username: string;
+  skill_name: string;
+  level: number;
+  current_xp: number;
+  xp_to_level: number;
+}
+
+export interface PlayerJobStats {
+  username: string;
+  job_name: string;
+  level: number;
+  xp: number;
+}
+
+export interface PlayerTeamStats {
+  username: string;
+  team_name: string;
+  team_level: number;
+  team_members: number;
+}
+
+export interface PlayerBalanceStats {
+  username: string;
+  balance: number;
+}
+
+export interface PlayerXPStats {
+  username: string;
+  total_xp_bottled: number;
+}
+
+export interface PlayerShopStats {
+  username: string;
+  shops_owned: number;
+  total_profits: number;
+}
+
+export interface PlayerFishStats {
+  username: string;
+  legendary_fish_caught: number;
+  largest_fish: number;
+}
+
+export interface PlayerPlotStats {
+  username: string;
+  plots_owned: number;
+  plots_merged: number;
+}
+
+export interface LeaderboardResponse<T> {
+  results: T[];
+  total: number;
+  page: number;
+  limit: number;
+}

@@ -24,10 +24,10 @@ const TopShowcases: React.FC = () => {
         // Fallback mock data
         setPlayers([
           {
-            name: "JerichoTorrent",
-            uuid: "679b0417-5145-4577-9ce6-5489fdb7eab6",
+            name: "Bumble_Bean",
+            uuid: "6faf2d4b-1e47-4abe-8d50-c6922c201c00",
             type: "builder",
-            description: "Recognized for exceptional building talent.",
+            description: "Recognized for exceptional building talent; builder of the Hobbit Hole.",
           },
           {
             name: "Hailey_Honey",
@@ -77,7 +77,7 @@ const TopShowcases: React.FC = () => {
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUpOrLeave}
       onMouseLeave={handleMouseUpOrLeave}
-      className="flex gap-6 overflow-x-auto px-2 pb-4 cursor-grab select-none justify-center"
+      className="flex flex-col md:flex-row gap-6 overflow-x-auto px-2 pb-4 cursor-grab select-none justify-center"
     >
       {players.map((p) => (
         <ShowcaseCard
