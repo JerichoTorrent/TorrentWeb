@@ -32,19 +32,29 @@ const GamemodeStatsSection: React.FC = () => {
           console.error("Expected array but got:", data);
           return;
         }
-
-        const enriched = data.map((gm: any) => ({
-          ...gm,
-          image: `/${gm.id}.png`,
-          lore: getLore(gm.id),
-        }));
-
-        setGamemodes(enriched);
+  
+        const order = ["survival", "lifesteal", "skyfactions", "creative"];
+  
+        const enriched = data.map((gm: any) => {
+          const id = gm.id.toLowerCase(); // Normalize
+          return {
+            ...gm,
+            id,
+            image: `/${id}.png`,
+            lore: getLore(id),
+          };
+        });
+  
+        const sorted = order
+          .map((id) => enriched.find((g) => g.id === id))
+          .filter(Boolean) as Gamemode[];
+  
+        setGamemodes(sorted);
       })
       .catch((err) => {
         console.error("Failed to load gamemodes", err);
       });
-  }, []);
+  }, []);  
 
   return (
     <div className="mt-16 px-4">

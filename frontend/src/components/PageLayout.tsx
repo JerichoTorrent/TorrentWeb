@@ -25,7 +25,7 @@ const PageLayout: React.FC<PageLayoutProps> = ({ children, fullWidth = false }) 
       <main
         className={`relative w-full px-4 sm:px-8 md:px-12 lg:px-20 xl:px-32 flex-grow ${
           fullWidth ? "" : "max-w-6xl"
-        } mx-auto pt-16 pb-12`}
+        } mx-auto pt-8 pb-12`}
       >
         {!isHome && (
           <div className="absolute top-4 left-2 z-10">

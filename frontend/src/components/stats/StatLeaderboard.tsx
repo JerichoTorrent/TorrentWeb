@@ -154,14 +154,19 @@ const StatLeaderboard: React.FC<Props> = ({ server, defaultCategory = "main" }) 
               {data.sort((a, b) => {
                 const key = sortKeyByCategory[category];
                 return (b[key] as number) - (a[key] as number);
+                // Massive struggle to get Bedrock player heads. I'll address this eventually but for no default to Steve
               }).map((row, i) => (
                 <tr key={i} className={i % 2 === 0 ? "bg-[#18181b]" : "bg-[#131316]"}>
                   <td className="px-4 py-2 flex items-center gap-2 whitespace-nowrap">
-                    <img
-                      src={`https://minotar.net/avatar/${row.username}/24`}
-                      alt="avatar"
-                      className="rounded"
-                    />
+                  <img
+                    src={
+                      row.username.startsWith(".")
+                        ? `https://minotar.net/avatar/Steve/24`
+                        : `https://minotar.net/avatar/${row.username}/24`
+                    }
+                    alt="Minecraft Player Avatar Icon"
+                    className="rounded"
+                  />
                     {row.username}
                   </td>
                   {cols.map((col) => (
