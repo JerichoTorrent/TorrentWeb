@@ -191,7 +191,9 @@ const StatLeaderboard: React.FC<Props> = ({ server, defaultCategory = "main" }) 
                       if (col.key === "ticks_played") {
                         return formatPlaytime(Number(rawValue));
                       }
-                  
+                      if (typeof rawValue === "string" && isNaN(Number(rawValue))) {
+                        return rawValue;
+                      }
                       return Number(rawValue).toLocaleString();
                     })()}
                   </td>
