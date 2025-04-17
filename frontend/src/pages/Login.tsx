@@ -36,6 +36,17 @@ const Login = () => {
       const data = await response.json();
 
       if (response.ok) {
+        if (data.twofaRequired) {
+          // Redirect to 2FA page with info
+          navigate("/login/2fa", {
+            state: {
+              uuid: data.uuid,
+              username: data.username,
+              method: data.method,
+            },
+          });
+          return;
+        }
         localStorage.setItem("authToken", data.token);
         localStorage.setItem("username", data.user.username);
         localStorage.setItem("uuid", data.user.uuid);

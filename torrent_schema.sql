@@ -38,6 +38,9 @@ CREATE TABLE users (
   reset_token VARCHAR(255),
   reset_expires DATETIME,
   last_login DATETIME DEFAULT NULL,
+  twofa_method ENUM('totp', 'email') DEFAULT NULL,
+  twofa_enabled BOOLEAN DEFAULT 0,
+  twofa_secret VARCHAR(255) DEFAULT NULL;
   reputation INT DEFAULT 0,
 
   -- XP system fields

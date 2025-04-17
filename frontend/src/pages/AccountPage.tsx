@@ -1,5 +1,6 @@
 import { useState } from "react";
 import PageLayout from "../components/PageLayout";
+import SecuritySection from "../components/SecuritySection";
 
 const tabs = [
   "Your Profile",
@@ -41,7 +42,7 @@ const AccountPage = () => {
           {activeTab === "Following" && <p>Users you're following.</p>}
           {activeTab === "Blocked" && <p>Blocked users list.</p>}
           {activeTab === "Minecraft Account" && <p>Account linking details go here.</p>}
-          {activeTab === "Security" && <p>Security settings like 2FA coming soon.</p>}
+          {activeTab === "Security" && <SecuritySection />}
           {activeTab === "Preferences" && <p>UI preferences and toggles.</p>}
         </div>
       </div>

@@ -38,6 +38,7 @@ import AccountPage from "./pages/AccountPage";
 import PunishmentDetailsPage from "./pages/PunishmentDetailsPage";
 import ScrollToTop from "./components/ScrollToTop";
 import StatsPage from "./components/stats/Stats";
+import Login2FA from "./pages/Login2FA";
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
@@ -85,6 +86,7 @@ function App() {
           <Route path="/dashboard/account" element={<AccountPage />} />
           <Route path="/bans/list/:id" element={<PunishmentDetailsPage />} />
           <Route path="/stats" element={<StatsPage />} />
+          <Route path="/login/2fa" element={<Login2FA />} />
         </Routes>
       </Router>
     </AuthProvider>

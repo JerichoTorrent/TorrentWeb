@@ -15,8 +15,10 @@ import forumActionsRoutes from "./routes/forumActions.js";
 import forumUploadRoutes from './routes/forumUpload.js';
 import usersRoutes from "./routes/users.js";
 import statsRoutes from "./routes/stats.js";
+import twofaRoutes from "./routes/2fa.js";
+import session from "express-session";
 
-import db from "./utils/db.js"; // shared DB pool
+import db from "./utils/db.js";
 import blogRoutes from "./routes/blog.js";
 import bansRoutes from "./routes/bans.js";
 import appealsRoutes from "./routes/appeals.js";
@@ -54,6 +56,19 @@ app.use(forumUploadRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/api/users", usersRoutes);
 app.use(statsRoutes);
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || "changeme-torrent-secret",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: true, // true if behind HTTPS/Cloudflare in production
+      httpOnly: true,
+      maxAge: 1000 * 60 * 10, // 10 minutes for 2FA setup
+    },
+  })
+);
+app.use("/api/2fa", twofaRoutes);
 app.use(express.static(FRONTEND_BUILD_PATH));
 
 // Verify DB Connection
@@ -242,6 +257,16 @@ router.post("/auth/login", rateLimiter(1, 5, "Too many login attempts. Try again
     if (!isMatch)
       return res.status(401).json({ error: "Invalid username or password." });
 
+    if (user.twofa_enabled) {
+      // Send partial login response — frontend will request 2FA code
+      return res.status(200).json({
+        twofaRequired: true,
+        method: user.twofa_method,
+        uuid: insertUuidDashes(user.uuid),
+        username: user.username,
+      });
+    }
+
     const token = jwt.sign(
       {
         uuid: insertUuidDashes(user.uuid),
@@ -265,6 +290,59 @@ router.post("/auth/login", rateLimiter(1, 5, "Too many login attempts. Try again
     });
   } catch (err) {
     console.error("Login error:", err);
+    res.status(500).json({ error: "Server error." });
+  }
+});
+
+router.post("/auth/2fa/verify-login", async (req, res) => {
+  const { uuid, token } = req.body;
+  if (!uuid || !token)
+    return res.status(400).json({ error: "Missing credentials." });
+
+  try {
+    const [users] = await db.query("SELECT * FROM users WHERE uuid = ?", [uuid]);
+    if (!users.length || !users[0].twofa_enabled)
+      return res.status(401).json({ error: "2FA not enabled or user not found." });
+
+    const user = users[0];
+
+    if (user.twofa_method === "totp") {
+      const speakeasy = await import("speakeasy");
+      const verified = speakeasy.totp.verify({
+        secret: user.twofa_secret,
+        encoding: "base32",
+        token,
+        window: 1,
+      });
+
+      if (!verified) return res.status(401).json({ error: "Invalid code." });
+    }
+
+    // TO DO: Add email verification logic :)
+
+    const jwtToken = jwt.sign(
+      {
+        uuid: insertUuidDashes(user.uuid),
+        username: user.username,
+        is_staff: user.is_staff === 1,
+      },
+      JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    await db.query("UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE uuid = ?", [user.uuid]);
+
+    res.json({
+      message: "2FA login successful",
+      token: jwtToken,
+      user: {
+        username: user.username,
+        uuid: insertUuidDashes(user.uuid),
+        is_staff: user.is_staff === 1,
+      },
+    });
+  } catch (err) {
+    console.error("2FA Login error:", err);
     res.status(500).json({ error: "Server error." });
   }
 });
