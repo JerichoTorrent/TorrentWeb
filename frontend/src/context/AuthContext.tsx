@@ -11,6 +11,10 @@ interface DecodedToken {
 
 interface AuthUser extends DecodedToken {
   token: string;
+  level?: number;
+  total_xp?: number;
+  badge?: string;
+  xp_this_week?: number;
 }
 
 const AuthContext = createContext<{
@@ -32,9 +36,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         const decoded = jwtDecode<DecodedToken>(token);
         const now = Date.now() / 1000;
-
+  
         if (decoded.exp && decoded.exp > now) {
-          setUser({ token, ...decoded });
+          fetch(`/api/users/${decoded.username}`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          })
+            .then(res => res.json())
+            .then(data => {
+              setUser({
+                token,
+                ...decoded,
+                level: data.level,
+                total_xp: data.total_xp,
+              });
+            })
+            .catch(() => {
+              setUser({ token, ...decoded }); // fallback
+            });
         } else {
           console.warn("Token expired");
           localStorage.removeItem("authToken");
@@ -44,23 +64,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         localStorage.removeItem("authToken");
       }
     }
-  }, []);
+  }, []);  
 
   const login = (token: string) => {
     try {
       const decoded = jwtDecode<DecodedToken>(token);
       const now = Date.now() / 1000;
-
+  
       if (decoded.exp && decoded.exp > now) {
         localStorage.setItem("authToken", token);
-        setUser({ token, ...decoded });
+  
+        fetch(`/api/users/${decoded.username}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+          .then(res => res.json())
+          .then(data => {
+            setUser({
+              token,
+              ...decoded,
+              level: data.level,
+              total_xp: data.total_xp,
+            });
+          })
+          .catch(() => {
+            // Fallback with basic token info
+            setUser({ token, ...decoded });
+          });
       } else {
         console.warn("Login failed — token expired");
       }
     } catch (e) {
       console.error("Login failed — invalid token:", e);
     }
-  };
+  };  
 
   const logout = () => {
     localStorage.removeItem("authToken");

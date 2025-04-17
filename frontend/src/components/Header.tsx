@@ -4,6 +4,7 @@ import { useContext, useEffect, useRef, useState } from "react";
 import AuthContext from "../context/AuthContext";
 import { logoutUser } from "../api";
 import ParticleBackground from "./ParticleBackground";
+import { getXpForLevel, getXpProgress } from "../utils/xpUtils";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const MCSTATUS_URL = import.meta.env.VITE_MCSTATUS_URL;
@@ -12,6 +13,10 @@ const DISCORD_URL = import.meta.env.VITE_DISCORD_URL;
 const Header = () => {
   const navigate = useNavigate();
   const { user, logout } = useContext(AuthContext);
+  const level = user?.level ?? 0;
+  const totalXp = user?.total_xp ?? 0;
+
+  const { currentLevelXp, nextLevelXp, progressPercent } = getXpProgress(level, totalXp);
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
@@ -116,9 +121,14 @@ const Header = () => {
                     </div>
                   </div>
                   <div className="w-full h-3 bg-gray-800 rounded-full mb-3 relative overflow-hidden">
-                    <div className="h-full bg-yellow-400 rounded-full" style={{ width: "45%" }} />
+                    <div
+                      className="h-full bg-yellow-400 rounded-full transition-all duration-500"
+                      style={{ width: `${progressPercent}%` }}
+                    />
                   </div>
-                  <p className="text-xs text-gray-400 mb-3">Level 7</p>
+                  <p className="text-xs text-gray-400 mb-3">
+                    Level {level} — {totalXp - currentLevelXp} / {nextLevelXp - currentLevelXp} XP
+                  </p>
                   <div className="border-t border-gray-700 my-3" />
                   <div className="grid grid-cols-2 gap-2 mb-3">
                     <button onClick={() => { navigate("/dashboard"); setOpen(false); }} className="text-left hover:text-yellow-400">View my profile</button>

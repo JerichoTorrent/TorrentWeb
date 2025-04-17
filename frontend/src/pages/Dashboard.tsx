@@ -2,9 +2,13 @@
 import { useContext } from "react";
 import AuthContext from "../context/AuthContext";
 import PageLayout from "../components/PageLayout";
+import { getXpProgress } from "../utils/xpUtils";
 
 const Dashboard = () => {
   const { user } = useContext(AuthContext);
+  const level = user?.level ?? 0;
+  const totalXp = user?.total_xp ?? 0;
+  const { currentLevelXp, nextLevelXp, progressPercent } = getXpProgress(level, totalXp);
 
   return (
     <PageLayout fullWidth>
@@ -36,11 +40,16 @@ const Dashboard = () => {
 
         {/* XP Bar Placeholder */}
         <div>
-          <h3 className="text-sm font-semibold text-gray-400 mb-1">Level 24</h3>
-          <div className="w-full bg-gray-700 rounded h-3">
-            <div className="bg-yellow-400 h-3 rounded w-[60%]" />
-          </div>
-          <p className="text-xs text-gray-400 mt-1">1240 / 2000 XP</p>
+        <h3 className="text-sm font-semibold text-gray-400 mb-1">Level {level}</h3>
+        <div className="w-full bg-gray-700 rounded h-3">
+          <div
+            className="bg-yellow-400 h-3 rounded transition-all duration-500"
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
+        <p className="text-xs text-gray-400 mt-1">
+          {totalXp - currentLevelXp} / {nextLevelXp - currentLevelXp} XP
+        </p>
         </div>
 
         {/* Placeholder Stats */}

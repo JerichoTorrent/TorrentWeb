@@ -33,10 +33,18 @@ CREATE TABLE users (
   created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
   verified TINYINT(1) DEFAULT 0,
   verification_token VARCHAR(255),
-  email_verified TINYINT(1) NOT NULL DEFAULT 0;
+  email_verified TINYINT(1) NOT NULL DEFAULT 0,
   token_expires_at DATETIME,
   reset_token VARCHAR(255),
-  reset_token_expires_at DATETIME
+  reset_expires DATETIME,
+  last_login DATETIME DEFAULT NULL,
+  reputation INT DEFAULT 0,
+
+  -- XP system fields
+  total_xp INT DEFAULT 0,
+  level INT DEFAULT 0,
+  last_xp_gain DATETIME,
+  xp_this_week INT DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- FORUM CATEGORIES

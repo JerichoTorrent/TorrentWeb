@@ -2,6 +2,7 @@ import express from "express";
 import db from "../utils/db.js";
 import authMiddleware from "../middleware/authMiddleware.js";
 import { limitReactions, limitFlags } from "../utils/rateLimiter.js";
+import { awardXp } from "../utils/xpManager.js";
 
 const router = express.Router();
 
@@ -16,16 +17,20 @@ router.post("/posts/:postId/react", authMiddleware, limitReactions, async (req, 
   }
 
   try {
-    // Get existing reaction
+    // Check if this user already reacted
     const [existingRows] = await db.query(
       `SELECT reaction FROM forum_reactions WHERE post_id = ? AND user_id = ?`,
       [postId, userId]
     );
 
+    let awardReactionXp = false;
+    let postAuthorId = null;
+
     if (existingRows.length > 0) {
       const existing = existingRows[0].reaction;
+
       if (existing === reaction) {
-        // Undo reaction if clicked again
+        // Undo reaction
         await db.query(
           `DELETE FROM forum_reactions WHERE post_id = ? AND user_id = ?`,
           [postId, userId]
@@ -38,14 +43,32 @@ router.post("/posts/:postId/react", authMiddleware, limitReactions, async (req, 
         );
       }
     } else {
-      // Add new reaction
+      // NEW reaction — award XP only if it's an upvote
       await db.query(
         `INSERT INTO forum_reactions (post_id, user_id, reaction) VALUES (?, ?, ?)`,
         [postId, userId, reaction]
       );
+
+      if (reaction === "upvote") {
+        awardReactionXp = true;
+        const [[post]] = await db.query(
+          `SELECT user_id FROM forum_posts WHERE id = ?`,
+          [postId]
+        );
+        postAuthorId = post?.user_id;
+      }
     }
 
-    // Calculate updated score
+    // Award XP to post author (but never to yourself)
+    if (awardReactionXp && postAuthorId && postAuthorId !== userId) {
+      try {
+        await awardXp(db, postAuthorId, "reaction_received");
+      } catch (err) {
+        console.warn("Failed to award XP for reaction:", err);
+      }
+    }
+
+    // Get updated score
     const [[{ score }]] = await db.query(
       `SELECT 
         SUM(CASE 

@@ -6,6 +6,7 @@ import { filterBadWords } from "../utils/filterBadWords.js";
 import { marked } from 'marked';
 import jwt from "jsonwebtoken";
 import { extractMentions, linkifyMentions } from "../utils/mentionParser.js";
+import { awardXp } from "../utils/xpManager.js";
 
 const router = express.Router();
 const FETCH_DEPTH_LIMIT = 50;
@@ -407,6 +408,7 @@ router.post("/threads", authMiddleware, limitThreadPosts, async (req, res) => {
       "SELECT slug FROM forum_categories WHERE id = ?",
       [category_id]
     );
+    await awardXp(db, userId, "thread");
     
     res.status(201).json({ threadId, categorySlug: slug });
   } catch (err) {
@@ -450,6 +452,7 @@ router.post("/threads/:id/replies", authMiddleware, limitReplies, async (req, re
       JOIN users ON forum_posts.user_id = users.uuid
       WHERE forum_posts.id = ?
     `, [replyId]);
+    await awardXp(db, userId, "reply");
 
     res.status(201).json({ reply: rows[0] });
   } catch (err) {
