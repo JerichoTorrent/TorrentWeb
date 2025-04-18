@@ -17,6 +17,7 @@ import usersRoutes from "./routes/users.js";
 import statsRoutes from "./routes/stats.js";
 import twofaRoutes from "./routes/2fa.js";
 import session from "express-session";
+import badgeRoutes from "./routes/badges.js";
 
 import db from "./utils/db.js";
 import blogRoutes from "./routes/blog.js";
@@ -69,6 +70,7 @@ app.use(
   })
 );
 app.use("/api/2fa", twofaRoutes);
+app.use("/api/badges", badgeRoutes);
 app.use(express.static(FRONTEND_BUILD_PATH));
 
 // Verify DB Connection

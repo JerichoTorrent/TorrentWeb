@@ -40,7 +40,7 @@ CREATE TABLE users (
   last_login DATETIME DEFAULT NULL,
   twofa_method ENUM('totp', 'email') DEFAULT NULL,
   twofa_enabled BOOLEAN DEFAULT 0,
-  twofa_secret VARCHAR(255) DEFAULT NULL;
+  twofa_secret VARCHAR(255) DEFAULT NULL,
   reputation INT DEFAULT 0,
 
   -- XP system fields
@@ -49,6 +49,63 @@ CREATE TABLE users (
   last_xp_gain DATETIME,
   xp_this_week INT DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- BADGES
+CREATE TABLE badges (
+  id VARCHAR(32) PRIMARY KEY,
+  label VARCHAR(64) NOT NULL,
+  description TEXT,
+  icon_url VARCHAR(255),
+  secret BOOLEAN DEFAULT FALSE
+);
+
+CREATE TABLE user_badges (
+  uuid CHAR(36) NOT NULL,
+  badge_id VARCHAR(32) NOT NULL,
+  earned_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (uuid, badge_id),
+  FOREIGN KEY (badge_id) REFERENCES badges(id),
+  FOREIGN KEY (uuid) REFERENCES users(uuid)
+);
+
+INSERT INTO badges (id, label, description, icon_url) VALUES ('crafter', 'Crafter', 'Default badge for all players', '/badges/crafter.png');
+INSERT INTO badges (id, label, description, icon_url) VALUES ('overseer', 'Overseer', 'Staff of Torrent SMP', '/badges/overseer.png');
+INSERT INTO badges (id, label, description, icon_url) VALUES ('superadmin', 'Super-Admin', 'The Architect of the Network', '/badges/superadmin.png');
+INSERT INTO badges (id, label, description, icon_url) VALUES ('reforged', 'Reforged', 'Reset password at least once', '/badges/reforged.png');
+INSERT INTO badges (id, label, description, icon_url) VALUES ('interlinked', 'Interlinked', 'Linked your Minecraft account', '/badges/interlinked.png');
+INSERT INTO badges (id, label, description, icon_url) VALUES ('assembler', 'Assembler', 'Posted your first forum thread', '/badges/assembler.png');
+INSERT INTO badges (id, label, description, icon_url) VALUES ('enclave', 'Enclave', 'Posted 10 forum threads', '/badges/enclave.png');
+INSERT INTO badges (id, label, description, icon_url) VALUES ('ratifier', 'Ratifier', 'Reacted to 100 unique forum threads/replies', '/badges/ratifier.png');
+INSERT INTO badges (id, label, description, icon_url) VALUES ('disruptor', 'Disruptor', 'Forum thread reached 100 upvotes', '/badges/disruptor.png');
+INSERT INTO badges (id, label, description, icon_url) VALUES ('deathbringer', 'Deathbringer', 'Linked Minecraft account has over 100 player kills', '/badges/deathbringer.png');
+INSERT INTO badges (id, label, description, icon_url) VALUES ('glitched', 'Glitched', 'Reported a confirmed bug', '/badges/glitched.png');
+INSERT INTO badges (id, label, description, icon_url) VALUES ('mob', 'Mob', 'Reached level 5 on the site', '/badges/mob.png');
+INSERT INTO badges (id, label, description, icon_url) VALUES ('tinkerer', 'Tinkerer', 'Reached level 10 on the site', '/badges/tinkerer.png');
+INSERT INTO badges (id, label, description, icon_url) VALUES ('experienced', 'Experienced', 'Reached level 10 on the site', '/badges/experienced.png');
+INSERT INTO badges (id, label, description, icon_url) VALUES ('torrenter', 'Torrenter', 'Reached level 10 on the site', '/badges/torrenter.png');
+INSERT INTO badges (id, label, description, icon_url) VALUES ('artorian', 'Artorian', 'Reached level 25 on the site', '/badges/artorian.png');
+INSERT INTO badges (id, label, description, icon_url) VALUES ('slateborn', 'Slateborn', 'Reached level 25 on the site', '/badges/slateborn.png');
+INSERT INTO badges (id, label, description, icon_url) VALUES ('malfeasance', 'Malfeasance', 'Reached level 25 on the site', '/badges/malfeasance.png');
+INSERT INTO badges (id, label, description, icon_url) VALUES ('uncommon', 'Uncommon', 'Reached level 25 on the site', '/badges/uncommon.png');
+INSERT INTO badges (id, label, description, icon_url) VALUES ('shadow', 'Shadow', 'Reached level 50 on the site', '/badges/shadow.png');
+INSERT INTO badges (id, label, description, icon_url) VALUES ('exalted', 'Exalted', 'Reached level 50 on the site', '/badges/exalted.png');
+INSERT INTO badges (id, label, description, icon_url) VALUES ('cryptid', 'Cryptid', 'Reached level 50 on the site', '/badges/cryptid.png');
+INSERT INTO badges (id, label, description, icon_url) VALUES ('rare', 'Rare', 'Reached level 50 on the site', '/badges/rare.png');
+INSERT INTO badges (id, label, description, icon_url) VALUES ('general', 'General', 'Reached level 75 on the site', '/badges/general.png');
+INSERT INTO badges (id, label, description, icon_url) VALUES ('ender_dragon', 'Ender Dragon', 'Reached level 75 on the site', '/badges/ender_dragon.png');
+INSERT INTO badges (id, label, description, icon_url) VALUES ('admiral', 'Admiral', 'Reached level 75 on the site', '/badges/admiral.png');
+INSERT INTO badges (id, label, description, icon_url) VALUES ('captain', 'Captain', 'Reached level 75 on the site', '/badges/captain.png');
+INSERT INTO badges (id, label, description, icon_url) VALUES ('royal', 'Royal', 'Reached level 75 on the site', '/badges/royal.png');
+INSERT INTO badges (id, label, description, icon_url) VALUES ('epic', 'Epic', 'Reached level 75 on the site', '/badges/epic.png');
+INSERT INTO badges (id, label, description, icon_url) VALUES ('remnant', 'Remnant', 'Reached level 100 on the site', '/badges/remnant.png');
+INSERT INTO badges (id, label, description, icon_url) VALUES ('hero', 'Hero', 'Reached level 100 on the site', '/badges/hero.png');
+INSERT INTO badges (id, label, description, icon_url) VALUES ('legend', 'Legend', 'Reached level 100 on the site', '/badges/legend.png');
+INSERT INTO badges (id, label, description, icon_url) VALUES ('ascendant', 'Ascendant', 'Reached level 150 on the site', '/badges/ascendant.png');
+INSERT INTO badges (id, label, description, icon_url) VALUES ('mythic', 'Mythic', 'Reached level 150 on the site', '/badges/mythic.png');
+INSERT INTO badges (id, label, description, icon_url) VALUES ('traxis', 'Traxis', 'Reached level 200 on the site', '/badges/traxis.png');
+INSERT INTO badges (id, label, description, icon_url) VALUES ('astral', 'Astral', 'Reached level 200 on the site', '/badges/astral.png');
+INSERT INTO badges (id, label, description, icon_url) VALUES ('overpowered', 'Overpowered', 'Reached level 250 on the site', '/badges/overpowered.png');
+INSERT INTO badges (id, label, description, icon_url) VALUES ('lord', 'Lord', 'Reached level 500 on the site', '/badges/lord.png');
 
 -- FORUM CATEGORIES
 CREATE TABLE forum_categories (
