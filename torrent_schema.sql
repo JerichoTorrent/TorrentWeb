@@ -107,6 +107,25 @@ INSERT INTO badges (id, label, description, icon_url) VALUES ('astral', 'Astral'
 INSERT INTO badges (id, label, description, icon_url) VALUES ('overpowered', 'Overpowered', 'Reached level 250 on the site', '/badges/overpowered.png');
 INSERT INTO badges (id, label, description, icon_url) VALUES ('lord', 'Lord', 'Reached level 500 on the site', '/badges/lord.png');
 
+-- FOLLOWS and BLOCKS
+CREATE TABLE IF NOT EXISTS user_follows (
+  follower_uuid CHAR(36),
+  followed_uuid CHAR(36),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (follower_uuid, followed_uuid),
+  FOREIGN KEY (follower_uuid) REFERENCES users(uuid),
+  FOREIGN KEY (followed_uuid) REFERENCES users(uuid)
+);
+
+CREATE TABLE IF NOT EXISTS user_blocks (
+  blocker_uuid CHAR(36),
+  blocked_uuid CHAR(36),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (blocker_uuid, blocked_uuid),
+  FOREIGN KEY (blocker_uuid) REFERENCES users(uuid),
+  FOREIGN KEY (blocked_uuid) REFERENCES users(uuid)
+);
+
 -- FORUM CATEGORIES
 CREATE TABLE forum_categories (
   id INT AUTO_INCREMENT PRIMARY KEY,

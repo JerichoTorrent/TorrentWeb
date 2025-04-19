@@ -71,7 +71,6 @@ app.use(
 );
 app.use("/api/2fa", twofaRoutes);
 app.use("/api/badges", badgeRoutes);
-app.use(express.static(FRONTEND_BUILD_PATH));
 
 // Verify DB Connection
 db.getConnection()
@@ -161,6 +160,11 @@ router.post("/auth/request-verification", async (req, res) => {
     await db.query(
       "INSERT INTO users (uuid, username, email, password_hash, verification_token, email_verified) VALUES (?, ?, ?, ?, ?, 0)",
       [uuid, username, email, hashedPassword, token]
+    );
+
+    await db.query(
+      `INSERT INTO user_badges (uuid, badge_id, earned_at) VALUES (?, 'crafter', NOW())`,
+      [uuid]
     );
 
     const verificationLink = `${BACKEND_URL}/auth/verify-email?token=${token}`;
@@ -424,11 +428,12 @@ app.get("/api", (req, res) => {
 });
 
 // Production fallback for React routes
+app.use(express.static(FRONTEND_BUILD_PATH));
 app.get("*", (req, res) => {
   res.sendFile(path.join(FRONTEND_BUILD_PATH, "index.html"));
 });
 
-// Start Server
+// Start server
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
 });
