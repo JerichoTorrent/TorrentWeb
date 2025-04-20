@@ -35,6 +35,8 @@ interface GamemodeStats {
 }
 
 interface PublicUserProfile {
+  level: number;
+  coverUrl: string;
   uuid: string;
   username: string;
   joined: string;
@@ -47,164 +49,160 @@ interface PublicUserProfile {
 }
 
 const order = ["survival", "lifesteal", "skyfactions", "creative"];
-
+const tabList = ["About", "Stats", "Wall", "Followers", "Badges", "Threads"];
 const getBadgeIcon = (id: string) => `/icons/badges/${id}.png`;
 
 const PublicProfilePage = () => {
   const { username } = useParams();
   const [user, setUser] = useState<PublicUserProfile | null>(null);
-  const [blocked, setBlocked] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState("Stats");
 
   useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/users/public/${username}`, {
-          credentials: "include",
-        });
-        const data = await res.json();
-
-        if (data.blocked) {
-          setBlocked(true);
-        } else {
-          setUser(data);
-        }
-      } catch (err) {
-        console.error("Failed to load public profile", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUser();
+    fetch(`${API_BASE_URL}/api/users/public/${username}`, { credentials: "include" })
+      .then((res) => res.json())
+      .then((data) => setUser(data))
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, [username]);
 
   if (loading) {
-    return (
-      <PageLayout fullWidth>
-        <p className="text-white">Loading profile...</p>
-      </PageLayout>
-    );
-  }
-
-  if (blocked) {
-    return (
-      <PageLayout fullWidth>
-        <p className="text-red-400 text-center">
-          You have blocked this user.{" "}
-          <button className="underline text-yellow-400">Unblock?</button>
-        </p>
-      </PageLayout>
-    );
+    return <PageLayout fullWidth><p className="text-white">Loading profile...</p></PageLayout>;
   }
 
   if (!user) {
-    return (
-      <PageLayout fullWidth>
-        <p className="text-gray-400">User not found.</p>
-      </PageLayout>
-    );
+    return <PageLayout fullWidth><p className="text-red-400 text-center">User not found.</p></PageLayout>;
   }
 
   return (
     <PageLayout fullWidth>
-      <div className="max-w-4xl mx-auto py-10 px-6 text-white">
-        {/* Avatar + Basic Info */}
-        <div className="flex items-center gap-6 mb-6 flex-wrap">
-          <img
-            src={`https://mc-heads.net/avatar/${user.uuid}/80`}
-            alt="MC Head"
-            className="rounded shadow-md"
-          />
-          <div className="flex flex-col">
-            <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-3xl font-bold text-yellow-400">{user.username}</h1>
-              {user.badges?.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {user.badges.map((badge) => (
-                    <div
-                      key={badge.id}
-                      title={badge.description}
-                      className="flex items-center gap-1 bg-purple-700 text-white text-xs font-medium px-2 py-1 rounded"
-                    >
-                      <img
-                        src={badge.icon_url || getBadgeIcon(badge.id)}
-                        alt={badge.label}
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = "/icons/badges/default.png";
-                        }}
-                        className="w-4 h-4 object-contain"
-                      />
-                      <span className="truncate">{badge.label}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
+      <div className="bg-[#1e1e22] border border-gray-700 rounded-lg overflow-hidden max-w-6xl mx-auto mt-8 shadow-xl">
+        {/* Cover Photo */}
+        <div
+          className="relative bg-cover bg-center h-48 sm:h-64"
+          style={{ backgroundImage: `url("${user.coverUrl || '/default-cover.webp'}")` }}
+        >
+          {/* Actions */}
+          <div className="absolute top-2 right-4 flex gap-2 z-10">
+            <button className="px-3 py-1 text-sm bg-purple-700 text-white rounded hover:bg-purple-600">Report</button>
+            <button className="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-500">Block</button>
+          </div>
+
+          {/* Avatar */}
+          <div className="absolute bottom-0 left-6 transform translate-y-1/2 z-10 flex items-center gap-3">
+            <img
+              src={`https://mc-heads.net/avatar/${user.uuid}/100`}
+              className="w-24 h-24 sm:w-32 sm:h-32 rounded-lg border-4 border-[#1e1e22] bg-black shadow-lg"
+              alt="Avatar"
+            />
+            <div className="mt-16 text-sm sm:text-base text-white font-semibold">
+                Level {user.level ?? 0}
             </div>
-            <p className="text-sm text-gray-400">Joined: {user.joined}</p>
-            <p className="text-sm text-gray-500">Last seen: {user.lastSeen}</p>
           </div>
         </div>
 
-        {/* Stats Summary */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
-          <div className="bg-[#2a2a2e] p-4 rounded text-center">
-            <div className="text-xl font-bold">{user.followers}</div>
-            <div className="text-sm text-gray-400">Followers</div>
-          </div>
-          <div className="bg-[#2a2a2e] p-4 rounded text-center">
-            <div className="text-xl font-bold">{user.threadCount}</div>
-            <div className="text-sm text-gray-400">Threads</div>
-          </div>
-          <div className="bg-[#2a2a2e] p-4 rounded text-center">
-            <div className="text-xl font-bold">{user.reputation}</div>
-            <div className="text-sm text-gray-400">Reputation</div>
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className="flex flex-wrap gap-3 mb-8">
-          <button className="bg-yellow-500 hover:bg-yellow-600 text-black px-4 py-2 rounded">
-            Follow
-          </button>
-          <button className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded">
-            Block
-          </button>
-          <button className="bg-purple-700 hover:bg-purple-800 text-white px-4 py-2 rounded">
-            Report
-          </button>
-        </div>
-
-        {/* Stats Section */}
-        <div>
-          <h3 className="text-3xl text-yellow-400 font-bold mb-10 text-center">
-            Stats
-          </h3>
-          {user.stats.length > 0 ? (
-            order
-              .map((id) =>
-                user.stats.find((s) => s.name.toLowerCase() === id.toLowerCase())
-              )
-              .filter(Boolean)
-              .map((server) => {
-                const { name, data } = server!;
-                const displayName =
-                  {
-                    survival: "Survival",
-                    lifesteal: "Lifesteal",
-                    skyfactions: "SkyFactions",
-                    creative: "Creative",
-                  }[name.toLowerCase()] || name;
-
-                return (
-                  <div key={name} className="mb-12">
-                    <h4 className="text-2xl text-purple-300 font-bold mb-4">{displayName}</h4>
-                    <ProfileStatTable data={data} server={name.toLowerCase()} />
+        {/* Info Section */}
+        <div className="pt-6 sm:pt-10 px-6 flex flex-col sm:flex-row items-center gap-4">
+          <div className="flex-1 mt-4 sm:mt-0 text-center sm:text-left">
+            <div className="flex items-center gap-3 flex-wrap justify-center sm:justify-start">
+              <h1 className="text-3xl font-bold text-yellow-400">{user.username}</h1>
+              {user.badges?.length > 0 && user.badges.slice(0, 3).map((badge: Badge) => (
+                <div key={badge.id} className="relative group">
+                  <img
+                    src={badge.icon_url || getBadgeIcon(badge.id)}
+                    alt={badge.label}
+                    className="w-6 h-6 rounded"
+                    onError={(e) => (e.currentTarget.src = "/icons/badges/default.png")}
+                  />
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col bg-black text-white text-xs rounded px-3 py-2 shadow-xl z-50 whitespace-nowrap min-w-[180px] max-w-[240px] text-center">
+                    <span className="text-yellow-300 font-semibold">{badge.label}</span>
+                    <span className="text-gray-400 text-[10px] italic">
+                      {new Date(badge.earned_at).toLocaleDateString()}
+                    </span>
+                    <span className="text-gray-300 mt-1">{badge.description}</span>
                   </div>
-                );
-              })
-          ) : (
-            <p className="text-sm text-gray-400">User has no data from any gamemode.</p>
+                </div>
+              ))}
+              {user.badges.length > 3 && <span className="text-xs text-gray-400">+{user.badges.length - 3}</span>}
+            </div>
+            <p className="text-sm text-gray-400 mt-1">Joined: {user.joined}</p>
+            <div className="flex flex-wrap justify-center sm:justify-start gap-3 mt-3">
+              <button className="bg-yellow-500 text-black px-4 py-1 rounded hover:bg-yellow-400">Follow</button>
+              <button className="bg-purple-700 text-white px-4 py-1 rounded hover:bg-purple-600">Message</button>
+            </div>
+          </div>
+
+          <div className="flex flex-col items-center gap-1 mt-1 sm:mt-0 leading-tight">
+            <div className="text-center">
+              <p className="text-xl font-bold text-purple-300">{user.reputation}</p>
+              <p className="text-sm text-gray-400">Reputation</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xl font-bold text-purple-300">{user.threadCount}</p>
+              <p className="text-sm text-gray-400">Threads</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xl font-bold text-purple-300">{user.followers}</p>
+              <p className="text-sm text-gray-400">Followers</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="mt-4 px-6 border-t border-gray-700">
+          <div className="flex flex-wrap justify-center sm:justify-start gap-3 py-3">
+            {tabList.map((t) => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={`px-4 py-1 text-sm rounded-full ${
+                  tab === t ? "bg-purple-600 text-white" : "bg-gray-800 text-gray-400 hover:text-white"
+                }`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Tab Content */}
+        <div className="px-6 pb-10">
+          {tab === "Stats" && user.stats.length > 0 && (
+            order
+              .map((id) => user.stats.find((s: GamemodeStats) => s.name.toLowerCase() === id))
+              .filter(Boolean)
+              .map((server: GamemodeStats | undefined) => server && (
+                <div key={server.name} className="mb-12">
+                  <h3 className="text-2xl font-bold text-purple-300 mb-4">{server.name}</h3>
+                  <ProfileStatTable data={server.data} server={server.name.toLowerCase()} />
+                </div>
+              ))
+          )}
+          {tab === "About" && (
+            <div className="text-gray-400 italic">This user hasn’t written anything about themselves yet.</div>
+          )}
+          {tab === "Wall" && (
+            <div className="text-gray-400 italic">The wall system is coming soon.</div>
+          )}
+          {tab === "Followers" && (
+            <div className="text-gray-400 italic">You’ll be able to see mutuals and follower info here.</div>
+          )}
+          {tab === "Badges" && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {user.badges.map((badge: Badge) => (
+                <div key={badge.id} className="text-center">
+                  <img
+                    src={badge.icon_url || getBadgeIcon(badge.id)}
+                    alt={badge.label}
+                    className="w-12 h-12 mx-auto"
+                  />
+                  <p className="text-sm text-purple-300 mt-1">{badge.label}</p>
+                </div>
+              ))}
+            </div>
+          )}
+          {tab === "Threads" && (
+            <div className="text-gray-400 italic">This will show threads authored by the user.</div>
           )}
         </div>
       </div>
