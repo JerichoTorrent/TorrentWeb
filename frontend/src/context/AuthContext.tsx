@@ -9,11 +9,17 @@ interface DecodedToken {
   iat: number;
 }
 
+interface Badge {
+  id: string;
+  label: string;
+}
+
 interface AuthUser extends DecodedToken {
   token: string;
   level?: number;
   total_xp?: number;
   badge?: string;
+  badges?: Badge[];
   xp_this_week?: number;
 }
 
@@ -53,6 +59,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 ...decoded,
                 level: data.level,
                 total_xp: data.total_xp,
+                badge: data.badge,
+                badges: data.badges,
               });
             })
             .catch(() => {

@@ -42,6 +42,10 @@ CREATE TABLE users (
   twofa_enabled BOOLEAN DEFAULT 0,
   twofa_secret VARCHAR(255) DEFAULT NULL,
   reputation INT DEFAULT 0,
+  about TEXT,
+  status VARCHAR(100),
+  chosen_badge VARCHAR(64),
+  coverUrl VARCHAR(255)
 
   -- XP system fields
   total_xp INT DEFAULT 0,

@@ -97,7 +97,7 @@ router.get("/public/:username", async (req, res) => {
        ORDER BY ub.earned_at ASC`,
       [user.uuid]
     );
-
+    
     const badgeList = badges.map((b) => ({
       ...b,
       icon_url: `${process.env.FRONTEND_URL || ""}/icons/badges/${b.id}.png`,

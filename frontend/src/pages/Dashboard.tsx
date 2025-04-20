@@ -4,6 +4,7 @@ import PageLayout from "../components/PageLayout";
 import AuthContext from "../context/AuthContext";
 import ProfileStatTable from "../components/stats/ProfileStatTable";
 import { getXpProgress } from "../utils/xpUtils";
+import { useNavigate } from "react-router-dom";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -60,6 +61,7 @@ const Dashboard = () => {
   const [profile, setProfile] = useState<PublicUserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("Stats");
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!user?.username) return;
@@ -134,6 +136,12 @@ const Dashboard = () => {
               )}
             </div>
             <p className="text-sm text-gray-400 mt-1">Joined: {profile.joined}</p>
+            <button
+              onClick={() => navigate("/dashboard/account")}
+              className="mt-2 px-3 py-1 text-xs font-medium bg-gray-800 text-yellow-400 rounded hover:bg-gray-700 transition"
+            >
+              Edit Profile
+            </button>
           </div>
 
           <div className="flex flex-col items-center gap-1 mt-1 sm:mt-0 leading-tight">

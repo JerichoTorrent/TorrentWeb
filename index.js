@@ -18,7 +18,6 @@ import statsRoutes from "./routes/stats.js";
 import twofaRoutes from "./routes/2fa.js";
 import session from "express-session";
 import badgeRoutes from "./routes/badges.js";
-
 import db from "./utils/db.js";
 import blogRoutes from "./routes/blog.js";
 import bansRoutes from "./routes/bans.js";
@@ -26,6 +25,7 @@ import appealsRoutes from "./routes/appeals.js";
 import authenticateToken from "./middleware/authMiddleware.js";
 import "./bot.js";
 import "./cron/scheduler.js";
+import accountRoutes from "./routes/account.js";
 
 dotenv.config();
 
@@ -71,6 +71,7 @@ app.use(
 );
 app.use("/api/2fa", twofaRoutes);
 app.use("/api/badges", badgeRoutes);
+app.use("/api/users", accountRoutes);
 
 // Verify DB Connection
 db.getConnection()
