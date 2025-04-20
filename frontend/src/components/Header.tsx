@@ -99,14 +99,22 @@ const Header = () => {
                 onClick={() => setOpen(!open)}
                 className="flex items-center gap-2 px-4 py-2 bg-yellow-400 text-black font-semibold rounded shadow hover:shadow-[0_0_10px_rgba(128,0,255,0.7)] transition"
               >
-                <div className="w-6 h-6 bg-gray-700 rounded-md" />
+                <img
+                  src={`https://mc-heads.net/avatar/${user.username}/24`}
+                  alt="User Avatar"
+                  className="w-6 h-6 rounded"
+                />
                 <span>{user.username}</span>
               </button>
 
               {open && (
                 <div className="absolute right-0 mt-2 w-72 bg-[#1f1f1f] border border-[#2d2d34] shadow-lg rounded-lg p-4 text-sm text-white z-50">
                   <div className="flex justify-between items-center mb-3">
-                    <div className="w-10 h-10 bg-gray-700 rounded-md" />
+                    <img
+                      src={`https://mc-heads.net/avatar/${user.username}/40`}
+                      alt="User Avatar"
+                      className="w-10 h-10 rounded"
+                    />
                     <div className="text-right">
                       <button
                         onClick={() => {

@@ -229,7 +229,7 @@ const Dashboard = () => {
           {tab === "Appeals" && (
             <div className="text-center mt-4">
               <a
-                href="/appeals/my"
+                href="/appeals"
                 className="bg-purple-600 text-white px-6 py-3 rounded hover:bg-purple-500 transition"
               >
                 View My Appeals

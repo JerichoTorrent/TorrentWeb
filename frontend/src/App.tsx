@@ -41,9 +41,14 @@ import StatsPage from "./components/stats/Stats";
 import Login2FA from "./pages/Login2FA";
 import PublicProfilePage from "./pages/PublicProfile";
 
-// Protected Route Wrapper
+// Protected route for dashboard
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
-  const { user } = useContext(AuthContext);
+  const { user, loading } = useContext(AuthContext);
+
+  if (loading) {
+    return <div className="text-white text-center mt-20">Loading...</div>; // To do: make a fancy spinner component to reuse
+  }
+
   return user ? children : <Navigate to="/login" />;
 };
 
@@ -74,7 +79,7 @@ function App() {
           <Route path="/bans" element={<BansPage />} />
           <Route path="/bans/list" element={<BansListPage />} />
           <Route path="/bans/:uuid" element={<PlayerPunishments />} />
-          <Route path="/appeals/my" element={<MyAppealsPage />} />
+          <Route path="/appeals" element={<MyAppealsPage />} />
           <Route path="/appeals/:type" element={<AppealFormPage />} />
           <Route path="/forums" element={<ForumHomePage />} />
           <Route path="/forums/category/:categorySlug/thread/:id" element={<ThreadPage />} />
