@@ -599,4 +599,39 @@ router.get("/replies/:id", async (req, res) => {
   }
 });
 
+router.get("/user-threads/:username", async (req, res) => {
+  const { username } = req.params;
+
+  try {
+    const [[user]] = await db.query("SELECT uuid FROM users WHERE username = ?", [username]);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const [threads] = await db.query(`
+      SELECT 
+        t.id, t.title, t.content, t.created_at,
+        c.slug AS category_slug,
+        u.username,
+        (SELECT COUNT(*) FROM forum_posts WHERE thread_id = t.id AND deleted = FALSE) AS replies,
+        CAST(COALESCE(SUM(CASE 
+          WHEN r.reaction = 'upvote' THEN 1
+          WHEN r.reaction = 'downvote' THEN -1
+          ELSE 0
+        END), 0) AS SIGNED) AS reputation
+      FROM forum_threads t
+      JOIN forum_categories c ON t.category_id = c.id
+      JOIN users u ON t.user_id = u.uuid
+      LEFT JOIN forum_reactions r ON r.post_id = t.id
+      WHERE t.user_id = ?
+      GROUP BY t.id
+      ORDER BY t.created_at DESC
+      LIMIT 25
+    `, [user.uuid]);
+
+    res.json({ threads });
+  } catch (err) {
+    console.error("Error fetching user threads:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 export default router;

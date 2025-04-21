@@ -36,6 +36,15 @@ interface GamemodeStats {
   };
 }
 
+interface ThreadSummary {
+  id: number;
+  title: string;
+  created_at: string;
+  category_slug: string;
+  replies: number;
+  reputation: number;
+}
+
 interface PublicUserProfile {
   about?: string;
   status?: string;
@@ -62,23 +71,30 @@ const PublicProfilePage = () => {
   const [user, setUser] = useState<PublicUserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("Stats");
+  const [userThreads, setUserThreads] = useState<ThreadSummary[]>([]);
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/api/users/public/${username}`, { credentials: "include" })
       .then((res) => res.json())
       .then((data) => setUser(data))
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoading(false));
   }, [username]);
 
-  if (loading) {
-    return <PageLayout fullWidth><p className="text-white">Loading profile...</p></PageLayout>;
-  }
+  useEffect(() => {
+    if (tab === "Threads") {
+      fetch(`${API_BASE_URL}/api/forums/user-threads/${username}`, { credentials: "include" })
+        .then((res) => res.json())
+        .then((data) => {
+          if (Array.isArray(data.threads)) setUserThreads(data.threads);
+          else setUserThreads([]);
+        })
+        .catch(() => setUserThreads([]));
+    }
+  }, [tab, username]);
 
-  if (!user) {
-    return <PageLayout fullWidth><p className="text-red-400 text-center">User not found.</p></PageLayout>;
-  }
-  console.log("Loaded user:", user);
+  if (loading) return <PageLayout fullWidth><p className="text-white">Loading profile...</p></PageLayout>;
+  if (!user) return <PageLayout fullWidth><p className="text-red-400 text-center">User not found.</p></PageLayout>;
 
   return (
     <PageLayout fullWidth>
@@ -164,31 +180,23 @@ const PublicProfilePage = () => {
         <div className="mt-4 px-6 border-t border-gray-700">
           <div className="flex flex-wrap justify-center sm:justify-start gap-3 py-3">
             {tabList.map((t) => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={`px-4 py-1 text-sm rounded-full ${tab === t ? "bg-purple-600 text-white" : "bg-gray-800 text-gray-400 hover:text-white"
-                  }`}
-              >
-                {t}
-              </button>
+              <button key={t} onClick={() => setTab(t)} className={`px-4 py-1 text-sm rounded-full ${tab === t ? "bg-purple-600 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}>{t}</button>
             ))}
           </div>
         </div>
 
         {/* Tab Content */}
         <div className="px-6 pb-10">
-          {tab === "Stats" && user.stats.length > 0 && (
-            order
-              .map((id) => user.stats.find((s: GamemodeStats) => s.name.toLowerCase() === id))
-              .filter(Boolean)
-              .map((server: GamemodeStats | undefined) => server && (
-                <div key={server.name} className="mb-12">
-                  <h3 className="text-2xl font-bold text-purple-300 mb-4">{server.name}</h3>
-                  <ProfileStatTable data={server.data} server={server.name.toLowerCase()} />
-                </div>
-              ))
-          )}
+          {tab === "Stats" && user.stats.length > 0 && order
+            .map((id) => user.stats.find((s) => s.name.toLowerCase() === id))
+            .filter(Boolean)
+            .map((server) => server && (
+              <div key={server.name} className="mb-12">
+                <h3 className="text-2xl font-bold text-purple-300 mb-4">{server.name}</h3>
+                <ProfileStatTable data={server.data} server={server.name.toLowerCase()} />
+              </div>
+            ))}
+
           {tab === "About" && (
             <div className="prose prose-sm max-w-none text-white bg-black/30 p-4 rounded border border-gray-700 prose-headings:text-white prose-p:text-white prose-a:text-purple-400 hover:prose-a:text-purple-300">
               {user.about ? (
@@ -200,28 +208,43 @@ const PublicProfilePage = () => {
               )}
             </div>
           )}
-          {tab === "Wall" && (
-            <div className="text-gray-400 italic">The wall system is coming soon.</div>
+
+          {tab === "Threads" && (
+            <div className="space-y-6">
+              {userThreads.length === 0 ? (
+                <p className="text-gray-400 italic">This user hasn’t posted any threads yet.</p>
+              ) : (
+                userThreads.map((thread) => (
+                  <a
+                    key={thread.id}
+                    href={`/forums/category/${thread.category_slug}/thread/${thread.id}`}
+                    className="block border border-gray-700 rounded-lg p-4 bg-[#1a1a1d] hover:border-purple-600 transition"
+                  >
+                    <div className="flex justify-between items-center mb-1">
+                      <h3 className="text-xl font-bold text-yellow-400">{thread.title}</h3>
+                      <span className="text-xs text-gray-400">{new Date(thread.created_at).toLocaleDateString()}</span>
+                    </div>
+                    <div className="text-xs text-gray-400 mt-2 flex justify-between">
+                      <span>{thread.replies} replies</span>
+                      <span>{thread.reputation} reputation</span>
+                    </div>
+                  </a>
+                ))
+              )}
+            </div>
           )}
-          {tab === "Followers" && (
-            <div className="text-gray-400 italic">You’ll be able to see mutuals and follower info here.</div>
-          )}
+
+          {tab === "Wall" && <div className="text-gray-400 italic">The wall system is coming soon.</div>}
+          {tab === "Followers" && <div className="text-gray-400 italic">You’ll be able to see mutuals and follower info here.</div>}
           {tab === "Badges" && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              {user.badges.map((badge: Badge) => (
+              {user.badges.map((badge) => (
                 <div key={badge.id} className="text-center">
-                  <img
-                    src={badge.icon_url || getBadgeIcon(badge.id)}
-                    alt={badge.label}
-                    className="w-12 h-12 mx-auto"
-                  />
+                  <img src={badge.icon_url || getBadgeIcon(badge.id)} alt={badge.label} className="w-12 h-12 mx-auto" />
                   <p className="text-sm text-purple-300 mt-1">{badge.label}</p>
                 </div>
               ))}
             </div>
-          )}
-          {tab === "Threads" && (
-            <div className="text-gray-400 italic">This will show threads authored by the user.</div>
           )}
         </div>
       </div>

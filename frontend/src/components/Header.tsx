@@ -139,9 +139,9 @@ const Header = () => {
                   </p>
                   <div className="border-t border-gray-700 my-3" />
                   <div className="grid grid-cols-2 gap-2 mb-3">
-                    <button onClick={() => { navigate("/dashboard"); setOpen(false); }} className="text-left hover:text-yellow-400">View my profile</button>
+                    <button onClick={() => { navigate("/dashboard"); setOpen(false); }} className="text-left hover:text-yellow-400">Your Dashboard</button>
                     <button onClick={() => setOpen(false)} className="text-right hover:text-yellow-400">Following</button>
-                    <button onClick={() => setOpen(false)} className="text-left hover:text-yellow-400">News feed</button>
+                    <button onClick={() => setOpen(false)} className="text-left hover:text-yellow-400">News Feed</button>
                     <button onClick={() => setOpen(false)} className="text-right hover:text-yellow-400">Blocked</button>
                   </div>
                   <button

@@ -140,9 +140,15 @@ const Dashboard = () => {
             <p className="text-sm text-gray-400 mt-1">Joined: {profile.joined}</p>
             <button
               onClick={() => navigate("/dashboard/account")}
-              className="mt-2 px-3 py-1 text-xs font-medium bg-gray-800 text-yellow-400 rounded hover:bg-gray-700 transition"
+              className="mt-2 px-3 py-1 text-sm font-medium bg-gray-800 text-yellow-400 rounded hover:bg-gray-700 transition"
             >
               Edit Profile
+            </button>
+            <button
+              onClick={() => navigate(`/dashboard/${user?.username}`)}
+              className="px-3 py-1 text-sm bg-gray-800 text-white rounded hover:bg-gray-700 transition"
+            >
+              View My Public Profile
             </button>
           </div>
 
