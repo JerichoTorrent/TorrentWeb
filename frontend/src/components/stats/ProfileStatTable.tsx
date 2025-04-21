@@ -84,15 +84,15 @@ const ProfileStatTable: React.FC<Props> = ({ data, server }) => {
   const categories = allowedCategories[server.toLowerCase()] || [];
 
   const formatValue = (key: string, value: any) => {
-    if (value === null || value === undefined) return "—";
-
     if (key === "ticks_played") {
-      return formatPlaytime(value);
+      return formatPlaytime(Number(value));
     }
 
     if (key.endsWith("_cm")) {
-      return formatDistance(value);
+      return formatDistance(Number(value));
     }
+
+    if (value === null || value === undefined || Number.isNaN(value)) return "—";
 
     if (typeof value === "number") {
       return value.toLocaleString();
@@ -104,15 +104,25 @@ const ProfileStatTable: React.FC<Props> = ({ data, server }) => {
   const renderRows = () => {
     if (category === "jobs") {
       const jobs = data["jobs"];
-      if (Array.isArray(jobs)) {
-        return jobs.map((job) => (
-          <tr key={job.job_name}>
-            <td className="px-4 py-2 font-medium">Job</td>
-            <td className="px-4 py-2">{job.job_name}</td>
-            <td className="px-4 py-2">{job.level}</td>
-            <td className="px-4 py-2">{job.xp.toLocaleString()} XP</td>
-          </tr>
-        ));
+      if (Array.isArray(jobs) && jobs.length > 0) {
+        return (
+          <>
+            <tr className="text-purple-300">
+              <th className="px-4 py-2 text-left">Job</th>
+              <th className="px-4 py-2 text-left">Level</th>
+              <th className="px-4 py-2 text-left">XP</th>
+            </tr>
+            {jobs.map((job) => (
+              <tr key={job.job_name}>
+                <td className="px-4 py-2">
+                  {job.job_name.charAt(0).toUpperCase() + job.job_name.slice(1)}
+                </td>
+                <td className="px-4 py-2">{job.level}</td>
+                <td className="px-4 py-2">{job.xp.toLocaleString()} XP</td>
+              </tr>
+            ))}
+          </>
+        );
       }
       return null;
     }

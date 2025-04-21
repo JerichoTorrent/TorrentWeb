@@ -37,12 +37,13 @@ router.get("/suggest", async (req, res) => {
     res.status(500).json([]);
   }
 });
+
 router.get("/:username", async (req, res) => {
   const { username } = req.params;
 
   try {
     const [rows] = await db.query(
-      "SELECT uuid, username, level, total_xp FROM users WHERE username = ?",
+      `SELECT uuid, username, level, total_xp, xp_this_week, chosen_badge, status, about FROM users WHERE username = ?`,
       [username]
     );
 
@@ -50,12 +51,28 @@ router.get("/:username", async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    res.json(rows[0]);
+    const user = rows[0];
+
+    const [badges] = await db.query(
+      `SELECT b.id, b.label
+       FROM user_badges ub
+       JOIN badges b ON ub.badge_id = b.id
+       WHERE ub.uuid = ?
+       ORDER BY ub.earned_at ASC`,
+      [user.uuid]
+    );
+
+    res.json({
+      ...user,
+      badge: user.chosen_badge,
+      badges,
+    });
   } catch (err) {
     console.error("Error fetching user info:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
+
 
 // Public profiles
 router.get("/public/:username", async (req, res) => {
@@ -64,7 +81,7 @@ router.get("/public/:username", async (req, res) => {
 
   try {
     const [users] = await db.query(
-      `SELECT uuid, username, created_at, last_login, reputation FROM users WHERE username = ?`,
+      `SELECT uuid, username, created_at, last_login, reputation, status, about, chosen_badge FROM users WHERE username = ?`,
       [username]
     );
 
@@ -100,7 +117,7 @@ router.get("/public/:username", async (req, res) => {
     
     const badgeList = badges.map((b) => ({
       ...b,
-      icon_url: `${process.env.FRONTEND_URL || ""}/icons/badges/${b.id}.png`,
+      icon_url: `${process.env.FRONTEND_URL || ""}${b.icon_url}`,
     }));
 
     const [serverRows] = await statsPool.query(
@@ -118,7 +135,7 @@ router.get("/public/:username", async (req, res) => {
                 total_xp_bottled, legendary_fish_caught, largest_fish, plots_owned,
                 plots_merged, mcmmo_power_level, animals_bred, aviate_cm, climb_cm,
                 fall_cm, jumps, raid_wins, swim_cm, villager_trades, walk_cm,
-                items_crafted
+                items_crafted, fly_cm
          FROM player_stats
          WHERE username = ? AND server = ?
          LIMIT 1`,
@@ -166,7 +183,10 @@ router.get("/public/:username", async (req, res) => {
       threadCount: threads,
       reputation: user.reputation || 0,
       badges: badgeList,
+      badge: user.chosen_badge || null,
       stats: gamemodeStats,
+      status: user.status,
+      about: user.about,
     };
 
     res.json(response);

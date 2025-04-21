@@ -21,6 +21,8 @@ interface AuthUser extends DecodedToken {
   badge?: string;
   badges?: Badge[];
   xp_this_week?: number;
+  about?: string;
+  status?: string;
 }
 
 const AuthContext = createContext<{
@@ -61,6 +63,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 total_xp: data.total_xp,
                 badge: data.badge,
                 badges: data.badges,
+                about: data.about,
+                status: data.status,
               });
             })
             .catch(() => {
@@ -102,6 +106,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               ...decoded,
               level: data.level,
               total_xp: data.total_xp,
+              badge: data.badge,
+              badges: data.badges,
+              about: data.about,
+              status: data.status,
             });
           })
           .catch(() => {

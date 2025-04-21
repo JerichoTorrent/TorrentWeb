@@ -39,6 +39,14 @@ const AccountPage = () => {
     }
   }, [coverFile]);
 
+  useEffect(() => {
+  if (user) {
+    setAbout(user.about || "");
+    setStatus(user.status || "");
+    setChosenBadge(user.badge || "");
+  }
+}, [user]);
+
   const handleSave = async (e: FormEvent) => {
     e.preventDefault();
     setMessage("");
@@ -113,7 +121,7 @@ const AccountPage = () => {
                   placeholder="Tell others about yourself..."
                 />
                 <p className="text-xs text-gray-400 mt-1">Live Preview:</p>
-                <div className="prose prose-sm max-w-none bg-black/30 p-3 rounded border border-gray-700 text-white">
+                <div className="prose prose-sm max-w-none bg-black/30 p-3 rounded border border-gray-700 text-white prose-headings:text-white prose-p:text-white prose-a:text-purple-400 hover:prose-a:text-purple-300">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>{about || "_Nothing written yet._"}</ReactMarkdown>
                 </div>
               </div>

@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import PageLayout from "../components/PageLayout";
 import ProfileStatTable from "../components/stats/ProfileStatTable";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -35,6 +37,8 @@ interface GamemodeStats {
 }
 
 interface PublicUserProfile {
+  about?: string;
+  status?: string;
   level: number;
   coverUrl: string;
   uuid: string;
@@ -45,12 +49,13 @@ interface PublicUserProfile {
   threadCount: number;
   reputation: number;
   badges: Badge[];
+  badge?: string;
   stats: GamemodeStats[];
 }
 
 const order = ["survival", "lifesteal", "skyfactions", "creative"];
 const tabList = ["About", "Stats", "Wall", "Followers", "Badges", "Threads"];
-const getBadgeIcon = (id: string) => `/icons/badges/${id}.png`;
+const getBadgeIcon = (id: string) => `/badges/${id}.png`;
 
 const PublicProfilePage = () => {
   const { username } = useParams();
@@ -73,6 +78,7 @@ const PublicProfilePage = () => {
   if (!user) {
     return <PageLayout fullWidth><p className="text-red-400 text-center">User not found.</p></PageLayout>;
   }
+  console.log("Loaded user:", user);
 
   return (
     <PageLayout fullWidth>
@@ -96,7 +102,7 @@ const PublicProfilePage = () => {
               alt="Avatar"
             />
             <div className="mt-16 text-sm sm:text-base text-white font-semibold">
-                Level {user.level ?? 0}
+              Level {user.level ?? 0}
             </div>
           </div>
         </div>
@@ -104,26 +110,32 @@ const PublicProfilePage = () => {
         {/* Info Section */}
         <div className="pt-6 sm:pt-10 px-6 flex flex-col sm:flex-row items-center gap-4">
           <div className="flex-1 mt-4 sm:mt-0 text-center sm:text-left">
-            <div className="flex items-center gap-3 flex-wrap justify-center sm:justify-start">
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
               <h1 className="text-3xl font-bold text-yellow-400">{user.username}</h1>
-              {user.badges?.length > 0 && user.badges.slice(0, 3).map((badge: Badge) => (
-                <div key={badge.id} className="relative group">
-                  <img
-                    src={badge.icon_url || getBadgeIcon(badge.id)}
-                    alt={badge.label}
-                    className="w-6 h-6 rounded"
-                    onError={(e) => (e.currentTarget.src = "/icons/badges/default.png")}
-                  />
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col bg-black text-white text-xs rounded px-3 py-2 shadow-xl z-50 whitespace-nowrap min-w-[180px] max-w-[240px] text-center">
-                    <span className="text-yellow-300 font-semibold">{badge.label}</span>
-                    <span className="text-gray-400 text-[10px] italic">
-                      {new Date(badge.earned_at).toLocaleDateString()}
-                    </span>
-                    <span className="text-gray-300 mt-1">{badge.description}</span>
+              {user.status && (
+                <span className="text-sm italic text-gray-300">({user.status})</span>
+              )}
+              {user.badge && user.badges?.length > 0 && (() => {
+                const chosen = user.badges.find((b) => b.id === user.badge);
+                return chosen ? (
+                  <div key={chosen.id} className="relative group">
+                    <img
+                      src={chosen.icon_url || getBadgeIcon(chosen.id)}
+                      alt={chosen.label}
+                      className="w-6 h-6 rounded"
+                      onError={(e) => (e.currentTarget.src = "/badges/default.png")}
+                    />
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col bg-black text-white text-xs rounded px-3 py-2 shadow-xl z-50 whitespace-nowrap min-w-[180px] max-w-[240px] text-center">
+                      <span className="text-yellow-300 font-semibold">{chosen.label}</span>
+                      <span className="text-gray-400 text-[10px] italic">{new Date(chosen.earned_at).toLocaleDateString()}</span>
+                      <span className="text-gray-300 mt-1">{chosen.description}</span>
+                    </div>
                   </div>
-                </div>
-              ))}
-              {user.badges.length > 3 && <span className="text-xs text-gray-400">+{user.badges.length - 3}</span>}
+                ) : null;
+              })()}
+              {user.badges.length > 3 && (
+                <span className="text-xs text-gray-400">+{user.badges.length - 3}</span>
+              )}
             </div>
             <p className="text-sm text-gray-400 mt-1">Joined: {user.joined}</p>
             <div className="flex flex-wrap justify-center sm:justify-start gap-3 mt-3">
@@ -132,16 +144,16 @@ const PublicProfilePage = () => {
             </div>
           </div>
 
-          <div className="flex flex-col items-center gap-1 mt-1 sm:mt-0 leading-tight">
-            <div className="text-center">
+          <div className="border border-gray-700 rounded-lg p-4 text-center text-white w-full sm:w-48 sm:-mt-6">
+            <div className="mb-2">
               <p className="text-xl font-bold text-purple-300">{user.reputation}</p>
               <p className="text-sm text-gray-400">Reputation</p>
             </div>
-            <div className="text-center">
+            <div className="mb-2">
               <p className="text-xl font-bold text-purple-300">{user.threadCount}</p>
               <p className="text-sm text-gray-400">Threads</p>
             </div>
-            <div className="text-center">
+            <div>
               <p className="text-xl font-bold text-purple-300">{user.followers}</p>
               <p className="text-sm text-gray-400">Followers</p>
             </div>
@@ -155,9 +167,8 @@ const PublicProfilePage = () => {
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={`px-4 py-1 text-sm rounded-full ${
-                  tab === t ? "bg-purple-600 text-white" : "bg-gray-800 text-gray-400 hover:text-white"
-                }`}
+                className={`px-4 py-1 text-sm rounded-full ${tab === t ? "bg-purple-600 text-white" : "bg-gray-800 text-gray-400 hover:text-white"
+                  }`}
               >
                 {t}
               </button>
@@ -179,7 +190,15 @@ const PublicProfilePage = () => {
               ))
           )}
           {tab === "About" && (
-            <div className="text-gray-400 italic">This user hasn’t written anything about themselves yet.</div>
+            <div className="prose prose-sm max-w-none text-white bg-black/30 p-4 rounded border border-gray-700 prose-headings:text-white prose-p:text-white prose-a:text-purple-400 hover:prose-a:text-purple-300">
+              {user.about ? (
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{user.about}</ReactMarkdown>
+              ) : (
+                <p className="text-gray-400 italic">
+                  This user hasn’t written anything about themselves yet.
+                </p>
+              )}
+            </div>
           )}
           {tab === "Wall" && (
             <div className="text-gray-400 italic">The wall system is coming soon.</div>

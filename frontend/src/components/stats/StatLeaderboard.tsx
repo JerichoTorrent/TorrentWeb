@@ -182,7 +182,11 @@ const StatLeaderboard: React.FC<Props> = ({ server, defaultCategory = "main" }) 
                       const rawValue = row[col.key];
                   
                       if (rawValue === null || rawValue === undefined) return "—";
-                  
+
+                      // Format job names with capital first letter
+                      if (category === "jobs" && col.key === "job_name" && typeof rawValue === "string") {
+                        return rawValue.charAt(0).toUpperCase() + rawValue.slice(1);
+                      }
                       // Custom formatting
                       if (col.key === "fly_cm" || col.key === "swim_cm") {
                         return formatDistance(Number(rawValue));

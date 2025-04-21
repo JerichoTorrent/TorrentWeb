@@ -9,7 +9,7 @@ import { useNavigate } from "react-router-dom";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const order = ["survival", "lifesteal", "skyfactions", "creative"];
-const tabList = ["Stats", "Settings", "Badges", "Appeals"];
+const tabList = ["Stats", "Account", "Badges"];
 
 const getBadgeIcon = (id: string) => `/icons/badges/${id}.png`;
 
@@ -53,6 +53,7 @@ interface PublicUserProfile {
   threadCount: number;
   reputation: number;
   badges: Badge[];
+  badge?: string;
   stats: GamemodeStats[];
 }
 
@@ -114,23 +115,24 @@ const Dashboard = () => {
           <div className="flex-1 mt-4 sm:mt-0 text-center sm:text-left">
             <div className="flex items-center gap-3 flex-wrap justify-center sm:justify-start">
               <h1 className="text-3xl font-bold text-yellow-400">{profile.username}</h1>
-              {profile.badges.slice(0, 3).map((badge) => (
-                <div key={badge.id} className="relative group">
-                  <img
-                    src={badge.icon_url || getBadgeIcon(badge.id)}
-                    alt={badge.label}
-                    className="w-6 h-6 rounded"
-                    onError={(e) => (e.currentTarget.src = "/icons/badges/default.png")}
-                  />
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col bg-black text-white text-xs rounded px-3 py-2 shadow-xl z-50 whitespace-nowrap min-w-[180px] max-w-[240px] text-center">
-                    <span className="text-yellow-300 font-semibold">{badge.label}</span>
-                    <span className="text-gray-400 text-[10px] italic">
-                      {new Date(badge.earned_at).toLocaleDateString()}
-                    </span>
-                    <span className="text-gray-300 mt-1">{badge.description}</span>
+              {profile.badge && profile.badges.length > 0 && (() => {
+                const chosen = profile.badges.find((b) => b.id === profile.badge);
+                return chosen ? (
+                  <div key={chosen.id} className="relative group">
+                    <img
+                      src={chosen.icon_url || getBadgeIcon(chosen.id)}
+                      alt={chosen.label}
+                      className="w-6 h-6 rounded"
+                      onError={(e) => (e.currentTarget.src = "/icons/badges/default.png")}
+                    />
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col bg-black text-white text-xs rounded px-3 py-2 shadow-xl z-50 whitespace-nowrap min-w-[180px] max-w-[240px] text-center">
+                      <span className="text-yellow-300 font-semibold">{chosen.label}</span>
+                      <span className="text-gray-400 text-[10px] italic">{new Date(chosen.earned_at).toLocaleDateString()}</span>
+                      <span className="text-gray-300 mt-1">{chosen.description}</span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ) : null;
+              })()}
               {profile.badges.length > 3 && (
                 <span className="text-xs text-gray-400">+{profile.badges.length - 3}</span>
               )}
@@ -205,7 +207,7 @@ const Dashboard = () => {
                 </div>
               ))}
 
-          {tab === "Settings" && (
+          {tab === "Account" && (
             <div className="grid sm:grid-cols-2 gap-4 text-center">
               <a
                 href="/dashboard/account"
@@ -215,27 +217,10 @@ const Dashboard = () => {
               </a>
               <a
                 href="/dashboard/account"
-                className="bg-purple-600 text-white px-4 py-3 rounded hover:bg-purple-500 transition"
-              >
-                Preferences & Privacy
-              </a>
-              <a
-                href="/dashboard/account"
                 className="bg-[#2d2d34] text-white px-4 py-3 rounded hover:bg-gray-700 transition"
               >
                 Following / Blocked
               </a>
-              <a
-                href="/dashboard/account"
-                className="bg-[#2d2d34] text-white px-4 py-3 rounded hover:bg-gray-700 transition"
-              >
-                Minecraft Account
-              </a>
-            </div>
-          )}
-
-          {tab === "Appeals" && (
-            <div className="text-center mt-4">
               <a
                 href="/appeals"
                 className="bg-purple-600 text-white px-6 py-3 rounded hover:bg-purple-500 transition"

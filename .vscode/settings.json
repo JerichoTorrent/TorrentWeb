@@ -3,4 +3,5 @@
         "*.css": "tailwindcss"
     },
     "editor.wordBasedSuggestions": "matchingDocuments",
+    "editor.formatOnPaste": true,
 }
