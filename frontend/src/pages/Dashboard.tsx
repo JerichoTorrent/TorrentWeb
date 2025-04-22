@@ -138,18 +138,20 @@ const Dashboard = () => {
               )}
             </div>
             <p className="text-sm text-gray-400 mt-1">Joined: {profile.joined}</p>
-            <button
-              onClick={() => navigate("/dashboard/account")}
-              className="mt-2 px-3 py-1 text-sm font-medium bg-gray-800 text-yellow-400 rounded hover:bg-gray-700 transition"
-            >
-              Edit Profile
-            </button>
-            <button
-              onClick={() => navigate(`/dashboard/${user?.username}`)}
-              className="px-3 py-1 text-sm bg-gray-800 text-white rounded hover:bg-gray-700 transition"
-            >
-              View My Public Profile
-            </button>
+            <div className="flex flex-wrap gap-2 mt-2">
+              <button
+                onClick={() => navigate("/dashboard/account")}
+                className="px-3 py-1 text-sm font-medium bg-gray-800 text-yellow-400 rounded hover:bg-gray-700 transition"
+              >
+                Edit Profile
+              </button>
+              <button
+                onClick={() => navigate(`/dashboard/${user?.username}`)}
+                className="px-3 py-1 text-sm bg-gray-800 text-white rounded hover:bg-gray-700 transition"
+              >
+                View My Public Profile
+              </button>
+            </div>
           </div>
 
           <div className="flex flex-col items-center gap-1 mt-1 sm:mt-0 leading-tight">
