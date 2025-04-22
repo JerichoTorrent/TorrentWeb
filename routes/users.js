@@ -271,4 +271,42 @@ router.get("/:uuid/following-threads", authMiddleware, async (req, res) => {
   }
 });
 
+router.get("/:uuid/followers", async (req, res) => {
+  const { uuid } = req.params;
+
+  try {
+    const [rows] = await db.query(
+      `SELECT u.uuid, u.username
+       FROM user_follows f
+       JOIN users u ON u.uuid = f.follower_uuid
+       WHERE f.followed_uuid = ?`,
+      [uuid]
+    );
+
+    res.json({ followers: rows });
+  } catch (err) {
+    console.error("Error fetching followers:", err);
+    res.status(500).json({ error: "Failed to fetch followers." });
+  }
+});
+
+router.get("/:uuid/following", async (req, res) => {
+  const { uuid } = req.params;
+
+  try {
+    const [rows] = await db.query(
+      `SELECT u.uuid, u.username
+       FROM user_follows f
+       JOIN users u ON u.uuid = f.followed_uuid
+       WHERE f.follower_uuid = ?`,
+      [uuid]
+    );
+
+    res.json({ following: rows });
+  } catch (err) {
+    console.error("Error fetching following:", err);
+    res.status(500).json({ error: "Failed to fetch following list." });
+  }
+});
+
 export default router;

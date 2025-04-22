@@ -222,12 +222,6 @@ const Dashboard = () => {
                 Your Account
               </a>
               <a
-                href="/dashboard/account"
-                className="bg-[#2d2d34] text-white px-4 py-3 rounded hover:bg-gray-700 transition"
-              >
-                Following / Blocked
-              </a>
-              <a
                 href="/appeals"
                 className="bg-purple-600 text-white px-6 py-3 rounded hover:bg-purple-500 transition"
               >

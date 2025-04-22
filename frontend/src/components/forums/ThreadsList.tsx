@@ -85,13 +85,20 @@ const ThreadsList = ({ threads: externalThreads, categorySlug, disableStickies =
           <div className="space-y-6 mb-10">
             {threads.map((thread) => {
               const isSticky = !disableStickies && thread.is_sticky;
+              
+
+              const formattedContent =
+                (thread.content || "")
+                  .split("\n")
+                  .map((line: string) => line.trimEnd())
+                  .join("  \n")
+                  .slice(0, 400) + "...";
 
               return (
                 <div
                   key={thread.id}
-                  className={`cursor-pointer rounded-lg p-6 hover:border-purple-500 transition border ${
-                    isSticky ? "bg-gray-900 border-gray-600" : "bg-[#1e1e22] border-gray-700"
-                  }`}
+                  className={`cursor-pointer rounded-lg p-6 hover:border-purple-500 transition border ${isSticky ? "bg-gray-900 border-gray-600" : "bg-[#1e1e22] border-gray-700"
+                    }`}
                   onClick={() =>
                     navigate(`/forums/category/${thread.category_slug}/thread/${thread.id}`, {
                       state: { threadTitle: thread.title },
@@ -114,7 +121,7 @@ const ThreadsList = ({ threads: externalThreads, categorySlug, disableStickies =
                   </p>
                   <div className="text-gray-300 text-sm mt-3 prose prose-invert max-w-none">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {(thread.content || "").slice(0, 400) + "..."}
+                      {formattedContent}
                     </ReactMarkdown>
                   </div>
                   <div className="flex items-center gap-2 mt-2 text-sm text-gray-400">

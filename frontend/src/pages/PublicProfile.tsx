@@ -75,6 +75,7 @@ const PublicProfilePage = () => {
   const [userThreads, setUserThreads] = useState<ThreadSummary[]>([]);
   const { user: authUser } = useContext(AuthContext);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [followersList, setFollowersList] = useState<{ uuid: string; username: string }[]>([]);
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/api/users/public/${username}`, { credentials: "include" })
@@ -111,6 +112,15 @@ const PublicProfilePage = () => {
         .catch(() => setUserThreads([]));
     }
   }, [tab, username]);
+
+  useEffect(() => {
+    if (tab === "Followers" && user?.uuid) {
+      fetch(`${API_BASE_URL}/api/users/${user.uuid}/followers`)
+        .then((res) => res.json())
+        .then((data) => setFollowersList(data.followers || []))
+        .catch(() => setFollowersList([]));
+    }
+  }, [tab, user?.uuid]);
 
   const toggleFollow = async () => {
     if (!user?.uuid) return;
@@ -255,7 +265,7 @@ const PublicProfilePage = () => {
             ))}
 
           {tab === "About" && (
-            <div className="prose prose-sm max-w-none text-white bg-black/30 p-4 rounded border border-gray-700 prose-headings:text-white prose-p:text-white prose-a:text-purple-400 hover:prose-a:text-purple-300">
+            <div className="prose prose-sm max-w-none bg-black/30 p-3 rounded border border-gray-700 text-white prose-headings:text-white prose-p:text-white prose-a:text-purple-400 hover:prose-a:text-purple-300 prose-strong:text-white">
               {user.about ? (
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{user.about}</ReactMarkdown>
               ) : (
@@ -292,7 +302,31 @@ const PublicProfilePage = () => {
           )}
 
           {tab === "Wall" && <div className="text-gray-400 italic">The wall system is coming soon.</div>}
-          {tab === "Followers" && <div className="text-gray-400 italic">You’ll be able to see mutuals and follower info here.</div>}
+          {tab === "Followers" && (
+            <div>
+              {followersList.length === 0 ? (
+                <p className="text-gray-400 italic">No followers yet.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {followersList.map((follower) => (
+                    <li key={follower.uuid} className="text-white text-sm flex items-center gap-2">
+                      <img
+                        src={`https://mc-heads.net/avatar/${follower.uuid}/32`}
+                        alt=""
+                        className="w-8 h-8 rounded"
+                      />
+                      <a
+                        href={`/dashboard/${follower.username}`}
+                        className="text-purple-400 hover:underline"
+                      >
+                        {follower.username}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
           {tab === "Badges" && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {user.badges.map((badge) => (
