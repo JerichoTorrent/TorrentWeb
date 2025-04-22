@@ -1,10 +1,11 @@
 /** @jsxImportSource react */
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import PageLayout from "../components/PageLayout";
 import ProfileStatTable from "../components/stats/ProfileStatTable";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import AuthContext from "../context/AuthContext";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -72,6 +73,8 @@ const PublicProfilePage = () => {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("Stats");
   const [userThreads, setUserThreads] = useState<ThreadSummary[]>([]);
+  const { user: authUser } = useContext(AuthContext);
+  const [isFollowing, setIsFollowing] = useState(false);
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/api/users/public/${username}`, { credentials: "include" })
@@ -80,6 +83,22 @@ const PublicProfilePage = () => {
       .catch(() => { })
       .finally(() => setLoading(false));
   }, [username]);
+
+  useEffect(() => {
+    if (authUser?.uuid && user?.uuid && authUser.uuid !== user.uuid) {
+      const token = authUser?.token;
+      if (!token) return;
+
+      fetch(`${API_BASE_URL}/api/users/${user.uuid}/is-following`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+        .then(res => res.json())
+        .then(data => setIsFollowing(data.following))
+        .catch(() => { });
+    }
+  }, [authUser?.uuid, user?.uuid]);
 
   useEffect(() => {
     if (tab === "Threads") {
@@ -92,6 +111,34 @@ const PublicProfilePage = () => {
         .catch(() => setUserThreads([]));
     }
   }, [tab, username]);
+
+  const toggleFollow = async () => {
+    if (!user?.uuid) return;
+
+    const token = authUser?.token;
+    if (!token) return;
+
+    const endpoint = isFollowing
+      ? `${API_BASE_URL}/api/users/${user.uuid}/unfollow`
+      : `${API_BASE_URL}/api/users/${user.uuid}/follow`;
+
+    console.log("Toggling follow state...", { isFollowing, endpoint });
+
+    try {
+      const res = await fetch(endpoint, {
+        method: isFollowing ? "DELETE" : "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) throw new Error("Request failed: " + res.status);
+      setIsFollowing((prev) => !prev);
+    } catch (err) {
+      console.error("Toggle error:", err);
+      alert("Follow action failed.");
+    }
+  };
 
   if (loading) return <PageLayout fullWidth><p className="text-white">Loading profile...</p></PageLayout>;
   if (!user) return <PageLayout fullWidth><p className="text-red-400 text-center">User not found.</p></PageLayout>;
@@ -155,7 +202,17 @@ const PublicProfilePage = () => {
             </div>
             <p className="text-sm text-gray-400 mt-1">Joined: {user.joined}</p>
             <div className="flex flex-wrap justify-center sm:justify-start gap-3 mt-3">
-              <button className="bg-yellow-500 text-black px-4 py-1 rounded hover:bg-yellow-400">Follow</button>
+              {authUser?.uuid !== user.uuid && (
+                <button
+                  onClick={toggleFollow}
+                  className={`px-4 py-1 rounded transition font-semibold ${isFollowing
+                      ? "bg-red-600 text-white hover:bg-red-500"
+                      : "bg-yellow-500 text-black hover:bg-yellow-400"
+                    }`}
+                >
+                  {isFollowing ? "Unfollow" : "Follow"}
+                </button>
+              )}
               <button className="bg-purple-700 text-white px-4 py-1 rounded hover:bg-purple-600">Message</button>
             </div>
           </div>

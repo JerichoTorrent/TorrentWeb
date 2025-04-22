@@ -14,6 +14,7 @@ import forumRoutes from "./routes/forum.js";
 import forumActionsRoutes from "./routes/forumActions.js";
 import forumUploadRoutes from './routes/forumUpload.js';
 import usersRoutes from "./routes/users.js";
+import usersRouter from "./routes/users.js";
 import statsRoutes from "./routes/stats.js";
 import twofaRoutes from "./routes/2fa.js";
 import session from "express-session";
@@ -72,6 +73,7 @@ app.use(
 app.use("/api/2fa", twofaRoutes);
 app.use("/api/badges", badgeRoutes);
 app.use("/api/users", accountRoutes);
+app.use("/api/users", usersRouter);
 
 // Verify DB Connection
 db.getConnection()

@@ -1,6 +1,7 @@
 import express from "express";
 import db from "../utils/db.js";
 import mysql from "mysql2/promise";
+import authMiddleware from "../middleware/authMiddleware.js";
 
 const statsPool = mysql.createPool({
   host: process.env.TORRENTSTATS_DB_HOST,
@@ -193,6 +194,80 @@ router.get("/public/:username", async (req, res) => {
   } catch (err) {
     console.error("Error loading public profile:", err);
     res.status(500).json({ error: "Server error" });
+  }
+});
+
+router.post("/:uuid/follow", authMiddleware, async (req, res) => {
+  const follower = req.user.uuid;
+  const followed = req.params.uuid;
+
+  if (follower === followed) return res.status(400).json({ error: "You can't follow yourself." });
+
+  try {
+    await db.query(
+      "INSERT IGNORE INTO user_follows (follower_uuid, followed_uuid) VALUES (?, ?)",
+      [follower, followed]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to follow user." });
+  }
+});
+
+router.delete("/:uuid/unfollow", authMiddleware, async (req, res) => {
+  const follower = req.user.uuid;
+  const followed = req.params.uuid;
+
+  try {
+    await db.query(
+      "DELETE FROM user_follows WHERE follower_uuid = ? AND followed_uuid = ?",
+      [follower, followed]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to unfollow user." });
+  }
+});
+
+router.get("/:uuid/is-following", authMiddleware, async (req, res) => {
+  const follower = req.user.uuid;
+  const followed = req.params.uuid;
+
+  const [rows] = await db.query(
+    "SELECT 1 FROM user_follows WHERE follower_uuid = ? AND followed_uuid = ? LIMIT 1",
+    [follower, followed]
+  );
+
+  res.json({ following: rows.length > 0 });
+});
+
+router.get("/:uuid/following-threads", authMiddleware, async (req, res) => {
+  const { uuid } = req.params;
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const offset = (page - 1) * limit;
+
+  try {
+    const [threads] = await db.query(
+      `SELECT t.* FROM forum_threads t
+       JOIN user_follows f ON f.followed_uuid = t.user_id
+       WHERE f.follower_uuid = ?
+       ORDER BY t.created_at DESC
+       LIMIT ? OFFSET ?`,
+      [uuid, limit, offset]
+    );
+
+    const [count] = await db.query(
+      `SELECT COUNT(*) AS total
+       FROM forum_threads t
+       JOIN user_follows f ON f.followed_uuid = t.user_id
+       WHERE f.follower_uuid = ?`,
+      [uuid]
+    );
+
+    res.json({ threads, total: count[0].total });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch threads." });
   }
 });
 
