@@ -9,24 +9,39 @@ function insertUuidDashes(uuid) {
 
 module.exports = async function authenticateToken(req, res, next) {
   let token = null;
-  if (req.headers.authorization?.startsWith("Bearer ")) {
-    token = req.headers.authorization.split(" ")[1];
+
+  // Try Authorization header
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    token = authHeader.split(" ")[1];
   }
+
+  // Fallback: token in query param
   if (!token && req.query.token) {
     token = req.query.token;
   }
-  if (!token) {
-    return res.status(401).json({ error: "Access denied. No token provided." });
+
+  // Final guard: empty or junk token
+  if (!token || token === "undefined" || token.length < 10) {
+    return res.status(401).json({ error: "Access denied. No valid token provided." });
   }
+
   try {
     let uuid;
+
     if (token.startsWith("system:")) {
       uuid = token.slice(7);
-      if (uuid.length === 32) uuid = insertUuidDashes(uuid);
     } else {
       const verified = jwt.verify(token, process.env.JWT_SECRET);
       uuid = verified.uuid;
-      if (uuid.length === 32) uuid = insertUuidDashes(uuid);
+    }
+
+    if (!uuid) {
+      return res.status(401).json({ error: "Token missing UUID." });
+    }
+
+    if (uuid.length === 32) {
+      uuid = insertUuidDashes(uuid);
     }
 
     const conn = await mysql.createConnection({
@@ -43,7 +58,7 @@ module.exports = async function authenticateToken(req, res, next) {
     );
     await conn.end();
 
-    if (rows.length === 0) {
+    if (!rows.length) {
       return res.status(401).json({ error: "User not found." });
     }
 
@@ -56,7 +71,7 @@ module.exports = async function authenticateToken(req, res, next) {
 
     next();
   } catch (error) {
-    console.error("❌ Auth middleware error:", error);
+    console.error("❌ Auth middleware error:", error.message);
     res.status(403).json({ error: "Invalid or expired token." });
   }
 };

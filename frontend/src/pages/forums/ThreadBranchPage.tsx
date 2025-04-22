@@ -10,6 +10,8 @@ import mentionStyle from "../../styles/mentionStyle";
 import debounce from "lodash.debounce";
 import { Thread, Reply } from "../../types";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 const ThreadBranchPage = () => {
   const { id, parentId, categorySlug = "" } = useParams<{
     id: string;
@@ -17,7 +19,7 @@ const ThreadBranchPage = () => {
     categorySlug?: string;
   }>();
   const navigate = useNavigate();
-  const { user } = useContext(AuthContext);
+  const { user, loading } = useContext(AuthContext);
 
   const [thread, setThread] = useState<Thread | null>(null);
   const [parentReply, setParentReply] = useState<Reply | null>(null);
@@ -27,41 +29,58 @@ const ThreadBranchPage = () => {
   const [editingReplyId, setEditingReplyId] = useState<number | null>(null);
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
   const [suggestions, setSuggestions] = useState<{ id: string; display: string }[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [pageLoading, setPageLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!id || !parentId || loading) return;
+
     const controller = new AbortController();
-  
+
     const fetchData = async () => {
       try {
-        const threadRes = await fetch(`/api/forums/threads/${id}`, { signal: controller.signal });
+        const threadRes = await fetch(`${API_BASE_URL}/api/forums/threads/${id}`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${user?.token}`,
+            "Content-Type": "application/json"
+          },
+          credentials: "include",
+          signal: controller.signal
+        });
+
         if (!threadRes.ok) throw new Error("Thread not found");
         const threadData = await threadRes.json();
-  
-        const repliesRes = await fetch(`/api/forums/threads/${id}/replies/${parentId}`, { signal: controller.signal });
+
+        const repliesRes = await fetch(`${API_BASE_URL}/api/forums/threads/${id}/replies/${parentId}`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${user?.token}`,
+            "Content-Type": "application/json"
+          },
+          credentials: "include",
+          signal: controller.signal
+        });
+
         if (!repliesRes.ok) throw new Error("Replies not found");
         const repliesData = await repliesRes.json();
-  
+
         setThread(threadData.thread);
         setParentReply(repliesData.parent);
         setChildReplies(repliesData.replies || []);
         setLocalReplies([]);
-        setLoading(false);
+        setPageLoading(false);
       } catch (err: any) {
         if (err.name !== "AbortError") {
           setError(err.message || "Something went wrong");
-          setLoading(false);
+          setPageLoading(false);
         }
       }
     };
-  
+
     fetchData();
-  
-    return () => {
-      controller.abort();
-    };
-  }, [id, parentId]);  
+    return () => controller.abort();
+  }, [id, parentId, loading]);
 
   useEffect(() => {
     if (thread?.title) {
@@ -70,7 +89,7 @@ const ThreadBranchPage = () => {
         state: { threadTitle: thread.title },
       });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [thread?.title]);
 
   const handleReply = (id: number) => {
@@ -106,13 +125,13 @@ const ThreadBranchPage = () => {
           list.map((r) =>
             r.id === replyToId
               ? {
-                  ...r,
-                  children: r.children ? [...r.children, reply] : [reply],
-                }
+                ...r,
+                children: r.children ? [...r.children, reply] : [reply],
+              }
               : {
-                  ...r,
-                  children: r.children ? insertNested(r.children) : [],
-                }
+                ...r,
+                children: r.children ? insertNested(r.children) : [],
+              }
           );
 
         return insertNested(prev);
@@ -158,9 +177,9 @@ const ThreadBranchPage = () => {
             r.id === id
               ? reply
               : {
-                  ...r,
-                  children: r.children ? update(r.children) : [],
-                }
+                ...r,
+                children: r.children ? update(r.children) : [],
+              }
           );
         return update(prev);
       });
@@ -210,7 +229,7 @@ const ThreadBranchPage = () => {
   return (
     <PageLayout fullWidth>
       <div className="w-full overflow-x-auto py-16 px-4">
-        {loading ? (
+        {pageLoading ? (
           <p className="text-center text-gray-400">Loading thread branch...</p>
         ) : error ? (
           <div className="text-center text-red-400">
@@ -231,7 +250,7 @@ const ThreadBranchPage = () => {
               thread={thread}
               currentUserId={user?.uuid}
               onDeleteThread={() => navigate(`/forums/category/${thread.category_slug}`)}
-              onReply={() => {}}
+              onReply={() => { }}
             />
 
             {user && (

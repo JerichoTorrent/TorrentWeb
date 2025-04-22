@@ -141,6 +141,19 @@ CREATE TABLE forum_categories (
   staff_only TINYINT(1) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+INSERT INTO forum_categories (slug, name, description, section, sort_order) VALUES
+('announcements', 'Announcements', 'Official news, updates, and announcements.', 'Administration', 1),
+('introductions', 'Introductions', 'Introduce yourself to the community.', 'Torrent Community', 1),
+('general-discussion', 'General Discussion', 'Talk about anything server-related or off-topic.', 'Torrent Community', 2),
+('staff-applications', 'Staff Applications', 'Apply to be a staff member on Torrent Network.', 'Torrent Community', 3);
+('help', 'Help & Support', 'Need help? Ask here and get support from staff or players.', 'Torrent Network Servers', 1),
+('bug-reports', 'Bug Reports', 'Report bugs or issues you encounter on the server.', 'Torrent Network Servers', 2),
+('suggestions', 'Suggestions', 'Have a cool idea? Suggest features or changes here.', 'Torrent Network Servers', 3),
+('survival', 'Survival', 'Survival-related discussions including builds, dungeons, quests, and more.', 'Torrent Network Servers', 4),
+('lifesteal', 'Lifesteal', 'Discussion regarding Lifesteal PvP, teaming, betrayals, and more.', 'Torrent Network Servers', 5),
+('creative', 'Creative', 'Discussion and sharing projects on our Creative free-build server.', 'Torrent Network Servers', 6),
+('skyfactions', 'SkyFactions', 'Discuss everything related to SkyFactions, raids, alliances, etc.', 'Torrent Network Servers', 7);
+
 -- FORUM THREADS
 CREATE TABLE forum_threads (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -151,6 +164,7 @@ CREATE TABLE forum_threads (
   is_sticky TINYINT(1) DEFAULT 0,
   deleted TINYINT(1) DEFAULT 0,
   created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  is_private TINYINT(1) DEFAULT 0;
   KEY (category_id),
   KEY (user_id),
   FOREIGN KEY (category_id) REFERENCES forum_categories(id),

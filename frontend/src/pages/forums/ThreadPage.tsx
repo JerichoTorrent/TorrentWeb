@@ -10,10 +10,12 @@ import { MentionsInput, Mention } from "react-mentions";
 import mentionStyle from "../../styles/mentionStyle";
 import debounce from "lodash.debounce";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 const ThreadPage = () => {
   const { id, categorySlug } = useParams<{ id: string; categorySlug: string }>();
   const navigate = useNavigate();
-  const { user } = useContext(AuthContext);
+  const { user, loading } = useContext(AuthContext);
 
   const [thread, setThread] = useState<ThreadType | null>(null);
   const [reputation, setReputation] = useState(0);
@@ -28,22 +30,44 @@ const ThreadPage = () => {
   const [totalReplies, setTotalReplies] = useState(0);
   const limit = 10;
 
-  const [loading, setLoading] = useState(true);
+  const [pageLoading, setPageLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!id) return;
+    if (!id || loading) return;
 
     const fetchData = async () => {
       try {
-        const threadRes = await fetch(`/api/forums/threads/${id}`);
-        if (!threadRes.ok) throw new Error("Thread not found");
-        const threadData = await threadRes.json();
+        const res = await fetch(`${API_BASE_URL}/api/forums/threads/${id}`, {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${user?.token}`,
+            "Content-Type": "application/json"
+          },
+          credentials: "include"
+        });
 
-        const repliesRes = await fetch(`/api/forums/threads/${id}/replies?page=${page}&limit=${limit}`);
+        if (!res.ok) throw new Error("Thread not found");
+        const threadData = await res.json();
+
+        const repliesRes = await fetch(`${API_BASE_URL}/api/forums/threads/${id}/replies?page=${page}&limit=${limit}`, {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${user?.token}`,
+            "Content-Type": "application/json"
+          },
+          credentials: "include"
+        });
         const repliesData = await repliesRes.json();
 
-        const repRes = await fetch(`/api/forums/posts/${threadData.thread.id}/reputation`);
+        const repRes = await fetch(`${API_BASE_URL}/api/forums/posts/${threadData.thread.id}/reputation`, {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${user?.token}`,
+            "Content-Type": "application/json"
+          },
+          credentials: "include"
+        });
         if (repRes.ok) {
           const repData = await repRes.json();
           setReputation(repData.reputation);
@@ -60,22 +84,22 @@ const ThreadPage = () => {
         if (page === 1) {
           setLocalTopReplies([]);
         }
-        setLoading(false);
+        setPageLoading(false);
       } catch (err: any) {
         setError(err.message);
-        setLoading(false);
+        setPageLoading(false);
       }
     };
 
     fetchData();
-  }, [id, page]);
+  }, [id, page, loading]);
 
   const handleSubmit = async (parentId: number | null = null) => {
     const inputKey = parentId ?? "root";
     if (!id || !replyInputs[inputKey]?.trim()) return;
   
     try {
-      const postRes = await fetch(`/api/forums/threads/${id}/replies`, {
+      const postRes = await fetch(`${API_BASE_URL}/api/forums/threads/${id}/replies`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -95,7 +119,7 @@ const ThreadPage = () => {
       const postData = await postRes.json();
   
       // Fetch full reply with rendered markdown
-      const fullRes = await fetch(`/api/forums/replies/${postData.reply.id}`);
+      const fullRes = await fetch(`${API_BASE_URL}/api/forums/replies/${postData.reply.id}`);
       const contentType = fullRes.headers.get("content-type") || "";
 
       if (!fullRes.ok || !contentType.includes("application/json")) {
@@ -143,7 +167,7 @@ const ThreadPage = () => {
 
   const handleEdit = async (replyId: number, newContent: string) => {
     try {
-      const res = await fetch(`/api/forums/replies/${replyId}`, {
+      const res = await fetch(`${API_BASE_URL}/api/forums/replies/${replyId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -158,7 +182,7 @@ const ThreadPage = () => {
       }
   
       // Re-fetch full updated reply with rendered markdown
-      const replyRes = await fetch(`/api/forums/replies/${replyId}`);
+      const replyRes = await fetch(`${API_BASE_URL}/api/forums/replies/${replyId}`);
       const { reply } = await replyRes.json();
   
       const updateReplies = (list: ReplyType[]): ReplyType[] =>
@@ -182,7 +206,7 @@ const ThreadPage = () => {
 
   const loadSuggestions = async (query: string) => {
     try {
-      const res = await fetch(`/api/suggest?q=${query}`);
+      const res = await fetch(`${API_BASE_URL}/api/suggest?q=${query}`);
       const users = await res.json();
       if (Array.isArray(users)) {
         const cleaned = users.filter(
@@ -207,7 +231,7 @@ const ThreadPage = () => {
   const handleDelete = async (replyId: number) => {
     if (!confirm("Are you sure you want to delete this reply?")) return;
 
-    const res = await fetch(`/api/forums/replies/${replyId}`, {
+    const res = await fetch(`${API_BASE_URL}/api/forums/replies/${replyId}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${user?.token}` },
     });
@@ -233,7 +257,7 @@ const ThreadPage = () => {
     if (!id) return;
     if (!confirm("Are you sure you want to delete this thread?")) return;
 
-    const res = await fetch(`/api/forums/threads/${id}`, {
+    const res = await fetch(`${API_BASE_URL}/api/forums/threads/${id}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${user?.token}` },
     });
@@ -248,7 +272,7 @@ const ThreadPage = () => {
   return (
     <PageLayout fullWidth>
       <div className="w-full overflow-x-auto py-16 px-4">
-        {loading ? (
+        {pageLoading ? (
           <p className="text-center text-gray-400">Loading thread...</p>
         ) : error ? (
           <div className="text-center text-red-400">

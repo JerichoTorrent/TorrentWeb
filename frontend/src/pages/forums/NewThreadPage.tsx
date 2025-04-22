@@ -30,6 +30,18 @@ const NewThreadPage = () => {
   const [uploading, setUploading] = useState(false);
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [selectedCategoryName, setSelectedCategoryName] = useState<string>("");
+  const isStaffAppCategory = selectedCategoryName === "Staff Applications";
+  const [app, setApp] = useState({
+    discord: "",
+    minecraft: user?.username ?? "",
+    age: "",
+    experience: "",
+    strengths: "",
+    timePlayed: "",
+    punishments: "",
+    whyHire: "",
+    availability: "",
+  });
   const [groupedCategories, setGroupedCategories] = useState<Record<string, Category[]>>({});
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
@@ -124,7 +136,7 @@ const NewThreadPage = () => {
           },
           body: formData,
         });
-      // 🔁 If token expired and we haven't retried yet
+      // If token expired and we haven't retried yet
       if (res.status === 401 && !retrying) {
         console.warn("Upload token expired. Fetching new token...");
         const tokenRes = await fetch("/api/forums/auth/upload-token", {
@@ -208,7 +220,28 @@ const NewThreadPage = () => {
     const trimmedTitle = title.trim();
     const trimmedContent = content.trim();
 
-    if (!trimmedTitle || !trimmedContent || !categoryId) {
+    if (!categoryId) {
+      setError("Missing category.");
+      return;
+    }
+
+    const finalTitle = isStaffAppCategory
+      ? `${user?.username ?? "Unknown"}'s Staff Application`
+      : trimmedTitle;
+
+    const finalContent = isStaffAppCategory
+      ? `**1. Discord Username:** ${app.discord}
+**2. Minecraft Username:** ${app.minecraft}
+**3. Age:** ${app.age}
+**4. Staff Experience:** ${app.experience}
+**5. Strengths:** ${app.strengths}
+**6. Time Played:** ${app.timePlayed}
+**7. Punishment History:** ${app.punishments}
+**8. Why Hire Me:** ${app.whyHire}
+**9. Availability:** ${app.availability}`
+      : trimmedContent;
+
+    if (!finalTitle || !finalContent) {
       setError("Missing required fields.");
       return;
     }
@@ -224,10 +257,11 @@ const NewThreadPage = () => {
           Authorization: `Bearer ${user?.token}`,
         },
         body: JSON.stringify({
-          title: trimmedTitle,
-          content: trimmedContent,
+          title: finalTitle,
+          content: finalContent,
           is_sticky: isSticky,
           category_id: categoryId,
+          is_private: isStaffAppCategory,
         }),
       });
 
@@ -299,79 +333,108 @@ const NewThreadPage = () => {
             </select>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Title</label>
-            <input
-              type="text"
-              required
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full rounded bg-[#1e1e22] border border-gray-700 p-3 text-white"
-              placeholder="Enter a descriptive title"
-            />
-          </div>
+          {isStaffAppCategory ? (
+            <>
+              <p className="text-sm text-gray-400 mb-3">Please fill out the following questionnaire:</p>
 
-          <div className="mb-4">
-            <label className="block text-sm text-white mb-1">Attach up to 5 images (3MB max each):</label>
-            <input
-              type="file"
-              accept=".png,.jpg,.jpeg"
-              multiple
-              onChange={(e) => {
-                if (e.target.files?.length) handleImageUpload(e.target.files);
-              }}
-              className="text-white"
-            />
-            {uploading && <p className="text-sm text-gray-400 mt-2">Uploading...</p>}
-            {uploadedImages.length > 0 && (
-              <div className="mt-2 grid grid-cols-2 gap-4">
-                {uploadedImages.map((url, i) => (
-                  <img
-                    key={i}
-                    src={url}
-                    alt={`Uploaded ${i + 1}`}
-                    className="max-w-full border border-gray-700 rounded"
+              {[
+                { key: "discord", label: "1. What is your Discord username and display name?" },
+                { key: "minecraft", label: "2. What is your Minecraft username?" },
+                { key: "age", label: "3. What is your age? (range is okay)" },
+                { key: "experience", label: "4. Do you have prior staff experience? Describe in detail." },
+                { key: "strengths", label: "5. Which areas do you excel in?" },
+                { key: "timePlayed", label: "6. How long have you played on our Network / Minecraft?" },
+                { key: "punishments", label: "7. Do you have a punishment history? Describe if so." },
+                { key: "whyHire", label: "8. Why should we hire you?" },
+                { key: "availability", label: "9. What days/times can you be most active?" },
+              ].map((q) => (
+                <div key={q.key} className="mb-4">
+                  <label className="block text-sm text-white mb-1">{q.label}</label>
+                  <textarea
+                    required
+                    value={app[q.key as keyof typeof app]}
+                    onChange={(e) =>
+                      setApp((prev) => ({ ...prev, [q.key]: e.target.value }))
+                    }
+                    className="w-full rounded bg-[#1e1e22] border border-gray-700 p-3 text-white"
+                    rows={3}
                   />
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Content</label>
-              <MentionsInput
-                value={content}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setContent(value);
-
-                  const lastWord = value.split(/\s+/).pop() || "";
-                  if (lastWord.startsWith("@") && lastWord.length > 1) {
-                    loadSuggestionsDebounced(lastWord.slice(1));
-                  }
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Tab") {
-                    e.preventDefault();
-                    const event = new KeyboardEvent("keydown", {
-                      key: "Enter",
-                      bubbles: true,
-                      cancelable: true,
-                    });
-                    e.currentTarget.dispatchEvent(event);
-                  }
-                }}
-                placeholder="Write your markdown post here..."
-                style={mentionStyle}
-                allowSuggestionsAboveCursor
-              >
-                <Mention
-                  trigger="@"
-                  data={suggestions}
-                  appendSpaceOnAdd
+                </div>
+              ))}
+            </>
+          ) : (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Title</label>
+                <input
+                  type="text"
+                  required
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full rounded bg-[#1e1e22] border border-gray-700 p-3 text-white"
+                  placeholder="Enter a descriptive title"
                 />
-              </MentionsInput>
-          </div>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm text-white mb-1">Attach up to 5 images (3MB max each):</label>
+                <input
+                  type="file"
+                  accept=".png,.jpg,.jpeg"
+                  multiple
+                  onChange={(e) => {
+                    if (e.target.files?.length) handleImageUpload(e.target.files);
+                  }}
+                  className="text-white"
+                />
+                {uploading && <p className="text-sm text-gray-400 mt-2">Uploading...</p>}
+                {uploadedImages.length > 0 && (
+                  <div className="mt-2 grid grid-cols-2 gap-4">
+                    {uploadedImages.map((url, i) => (
+                      <img
+                        key={i}
+                        src={url}
+                        alt={`Uploaded ${i + 1}`}
+                        className="max-w-full border border-gray-700 rounded"
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Content</label>
+                <MentionsInput
+                  value={content}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setContent(value);
+
+                    const lastWord = value.split(/\s+/).pop() || "";
+                    if (lastWord.startsWith("@") && lastWord.length > 1) {
+                      loadSuggestionsDebounced(lastWord.slice(1));
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Tab") {
+                      e.preventDefault();
+                      const event = new KeyboardEvent("keydown", {
+                        key: "Enter",
+                        bubbles: true,
+                        cancelable: true,
+                      });
+                      e.currentTarget.dispatchEvent(event);
+                    }
+                  }}
+                  placeholder="Write your markdown post here..."
+                  style={mentionStyle}
+                  allowSuggestionsAboveCursor
+                >
+                  <Mention trigger="@" data={suggestions} appendSpaceOnAdd />
+                </MentionsInput>
+              </div>
+            </>
+          )}
 
           {user.is_staff && (
             <div className="flex items-center gap-2">

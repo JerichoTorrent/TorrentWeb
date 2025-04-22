@@ -110,8 +110,9 @@ router.get("/threads", async (req, res) => {
 });
 
 // GET thread by ID
-router.get("/threads/:id", async (req, res) => {
+router.get("/threads/:id", authMiddleware, async (req, res) => {
   const threadId = req.params.id;
+
   try {
     const [rows] = await db.query(`
       SELECT t.*, u.username, c.slug as category_slug, c.name as category_name
@@ -121,17 +122,29 @@ router.get("/threads/:id", async (req, res) => {
       WHERE t.id = ?
     `, [threadId]);
 
-    if (rows.length === 0) return res.status(404).json({ error: "Thread not found" });
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Thread not found" });
+    }
 
-    let thread = rows[0];
+    const thread = rows[0];
+
+    if (thread.is_private) {
+      const user = req.user;
+      const isOwner = user?.uuid === thread.user_id;
+      const isStaff = user?.is_staff;
+
+      if (!isOwner && !isStaff) {
+        return res.status(403).json({ error: "You do not have permission to view this private thread." });
+      }
+    }
+
     if (thread.deleted) {
       thread.title = "[Deleted by staff]";
       thread.content = "[Deleted by staff]";
       thread.username = "[Deleted]";
-      thread.content_html = marked.parse(linkifyMentions(thread.content));
-    } else {
-      thread.content_html = marked.parse(linkifyMentions(thread.content));
     }
+
+    thread.content_html = marked.parse(linkifyMentions(thread.content));
 
     res.json({ thread });
   } catch (err) {
@@ -354,30 +367,53 @@ router.get("/:uuid", async (req, res) => {
 });
 
 router.post("/threads", authMiddleware, limitThreadPosts, async (req, res) => {
-  const { title, content, category_id, is_sticky = false } = req.body;
+  const { title, content, category_id, is_sticky = false, is_private = false } = req.body;
   const userId = req.user.uuid;
 
   if (!title || !content || !category_id) {
     return res.status(400).json({ error: "Title, content, and category are required" });
   }
-  if (category_id === 1 && !req.user.is_staff) {
-    return res.status(403).json({ error: "Only staff can post in this category." });
-  }
 
   try {
-    const [[category]] = await db.query(`SELECT id FROM forum_categories WHERE id = ?`, [category_id]);
+    // Fetch full category info
+    const [[category]] = await db.query(`SELECT id, name, section FROM forum_categories WHERE id = ?`, [category_id]);
     if (!category) {
       return res.status(400).json({ error: "Invalid category selected." });
     }
 
+    // Only staff can post in "Administration" section
+    if (category.section === "Administration" && !req.user.is_staff) {
+      return res.status(403).json({ error: "Only staff can post in this category." });
+    }
+
+    // Restrict sticky threads to staff members
     if (is_sticky && !req.user.is_staff) {
       return res.status(403).json({ error: "Only staff can create sticky threads." });
     }
 
+    // Limit staff applications to once every 30 days (category_id = 13)
+    if (category.name === "Staff Applications" && !req.user.is_staff) {
+      const [recent] = await db.query(
+        `SELECT id FROM forum_threads
+         WHERE user_id = ? AND category_id = ? AND created_at > NOW() - INTERVAL 30 DAY
+         LIMIT 1`,
+        [userId, category_id]
+      );
+      if (recent.length > 0) {
+        return res.status(429).json({ error: "You may only submit one staff application every 30 days." });
+      }
+    }
+
+    // Don't allow random private threads
+    if (is_private && category.name !== "Staff Applications") {
+      return res.status(403).json({ error: "Private threads are only allowed for staff applications." });
+    }
+
+    // Insert the new thread
     const [result] = await db.query(
-      `INSERT INTO forum_threads (user_id, title, content, category_id, is_sticky)
-       VALUES (?, ?, ?, ?, ?)`,
-      [userId, filterBadWords(title), filterBadWords(content), category_id, is_sticky]
+      `INSERT INTO forum_threads (user_id, title, content, category_id, is_sticky, is_private)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [userId, filterBadWords(title), filterBadWords(content), category_id, is_sticky, is_private ? 1 : 0]
     );
 
     const threadId = result.insertId;
@@ -393,9 +429,8 @@ router.post("/threads", authMiddleware, limitThreadPosts, async (req, res) => {
       ]
     );
 
-    // Extract and save mentions
+    // Mentions
     const mentionedUsers = await extractMentions(content);
-
     for (const user of mentionedUsers) {
       await db.query(
         `INSERT INTO mentions (post_type, post_id, mentioned_uuid)
@@ -408,8 +443,9 @@ router.post("/threads", authMiddleware, limitThreadPosts, async (req, res) => {
       "SELECT slug FROM forum_categories WHERE id = ?",
       [category_id]
     );
+
     await awardXp(db, userId, "thread");
-    
+
     res.status(201).json({ threadId, categorySlug: slug });
   } catch (err) {
     console.error("Error creating thread:", err);

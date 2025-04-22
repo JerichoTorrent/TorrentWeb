@@ -10,6 +10,7 @@ export type Thread = {
   is_sticky: boolean;
   category_slug: string;
   category_name: string;
+  is_private: boolean;
 };
   
 export type Reply = {

@@ -5,6 +5,8 @@ import { MentionsInput, Mention } from "react-mentions";
 import mentionStyle from "../../styles/mentionStyle";
 import debounce from "lodash.debounce";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 type ReplyProps = {
   reply: ReplyType;
   depth: number;
@@ -60,7 +62,7 @@ const Reply = ({
   useEffect(() => {
     const fetchReputation = async () => {
       try {
-        const res = await fetch(`/api/forums/posts/${reply.id}/reputation`);
+        const res = await fetch(`${API_BASE_URL}/api/forums/posts/${reply.id}/reputation`);
         const data = await res.json();
         if (res.ok) setReputation(data.reputation);
       } catch {
@@ -73,7 +75,7 @@ const Reply = ({
   const handleReaction = async (type: "upvote" | "downvote") => {
     if (!user) return alert("Login required.");
     try {
-      const res = await fetch(`/api/forums/posts/${reply.id}/react`, {
+      const res = await fetch(`${API_BASE_URL}/api/forums/posts/${reply.id}/react`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -96,7 +98,7 @@ const Reply = ({
     if (!user) return alert("Login required.");
     setShowFlagMenu(false);
     try {
-      const res = await fetch(`/api/forums/posts/${reply.id}/flag`, {
+      const res = await fetch(`${API_BASE_URL}/api/forums/posts/${reply.id}/flag`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -113,7 +115,7 @@ const Reply = ({
 
   const loadSuggestions = async (query: string) => {
     try {
-      const res = await fetch(`/api/users/suggest?q=${query}`);
+      const res = await fetch(`${API_BASE_URL}/api/users/suggest?q=${query}`);
       const users = await res.json();
       if (Array.isArray(users)) {
         const cleaned = users.filter((u) => u && typeof u === "object" && u.id && u.display);

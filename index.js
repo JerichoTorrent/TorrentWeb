@@ -44,8 +44,10 @@ const FRONTEND_BUILD_PATH = path.join(__dirname, "frontend", "dist");
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL,
-  credentials: true
+  origin: true,
+  credentials: true,
+  exposedHeaders: ["Authorization"],
+  allowedHeaders: ["Authorization", "Content-Type"]
 }));
 app.use(express.json());
 app.use("/api/blog", blogRoutes);

@@ -1,10 +1,9 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Thread } from "../../types";
-import { parseInline } from "marked";
-import DOMPurify from "dompurify";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import AuthContext from "../../context/AuthContext";
 
 interface ThreadsListProps {
   threads?: Thread[];
@@ -15,6 +14,7 @@ interface ThreadsListProps {
 const ThreadsList = ({ threads: externalThreads, categorySlug, disableStickies = false }: ThreadsListProps) => {
   const [threads, setThreads] = useState<Thread[]>(externalThreads || []);
   const [loading, setLoading] = useState(true);
+  const { user } = useContext(AuthContext);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const limit = 10;
@@ -31,14 +31,21 @@ const ThreadsList = ({ threads: externalThreads, categorySlug, disableStickies =
       const res = await fetch(url);
       const data = await res.json();
 
+      const visibleThreads = (data.threads || []).filter((thread: Thread) => {
+        if (!thread.is_private) return true;
+        if (!user) return false;
+        return user.uuid === thread.user_id || user.is_staff;
+      });
+
       const sortedThreads = disableStickies
-        ? (data.threads || []).sort(
-            (a: Thread, b: Thread) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-          )
-        : data.threads || [];
+        ? visibleThreads.sort(
+          (a: Thread, b: Thread) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )
+        : visibleThreads;
 
       setThreads(sortedThreads);
-      setTotal(data.total || 0);
+      setTotal(visibleThreads.length);
     } catch {
       setThreads([]);
     } finally {

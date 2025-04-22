@@ -4,6 +4,8 @@ import { Thread } from "../../types";
 import AuthContext from "../../context/AuthContext";
 import Markdown from "markdown-to-jsx";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 type Props = {
   thread: Thread;
   onDeleteThread?: () => void;
@@ -21,7 +23,7 @@ const ThreadPost = ({ thread, onDeleteThread, currentUserId, onReply }: Props) =
   useEffect(() => {
     const fetchReputation = async () => {
       try {
-        const res = await fetch(`/api/forums/posts/${thread.id}/reputation`);
+        const res = await fetch(`${API_BASE_URL}/api/forums/posts/${thread.id}/reputation`);
         const data = await res.json();
         if (res.ok) setReputation(data.reputation);
       } catch {
@@ -35,7 +37,7 @@ const ThreadPost = ({ thread, onDeleteThread, currentUserId, onReply }: Props) =
   const handleReaction = async (type: "upvote" | "downvote") => {
     if (!user) return alert("Login required.");
     try {
-      const res = await fetch(`/api/forums/posts/${thread.id}/react`, {
+      const res = await fetch(`${API_BASE_URL}/api/forums/posts/${thread.id}/react`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -58,7 +60,7 @@ const ThreadPost = ({ thread, onDeleteThread, currentUserId, onReply }: Props) =
     if (!user) return alert("Login required.");
     setShowFlagMenu(false);
     try {
-      const res = await fetch(`/api/forums/posts/${thread.id}/flag`, {
+      const res = await fetch(`${API_BASE_URL}/api/forums/posts/${thread.id}/flag`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -152,7 +154,7 @@ const ThreadPost = ({ thread, onDeleteThread, currentUserId, onReply }: Props) =
             if (!confirmToggle) return;
 
             try {
-              const res = await fetch(`/api/forums/threads/${thread.id}/sticky`, {
+              const res = await fetch(`${API_BASE_URL}/api/forums/threads/${thread.id}/sticky`, {
                 method: "PATCH",
                 headers: {
                   "Content-Type": "application/json",

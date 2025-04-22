@@ -63,7 +63,7 @@ const ForumHomePage = () => {
             <li>
               In order to submit a <strong>bug report</strong>, please{" "}
               <a
-                href="#"
+                href={`${import.meta.env.VITE_API_BASE_URL}/forums/new-thread?category=bug-reports`}
                 className="text-purple-400 hover:underline"
               >
                 click here
