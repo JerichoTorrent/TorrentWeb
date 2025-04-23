@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import PageLayout from "../components/PageLayout";
 import SplashHero from "../components/SplashHero";
+import DiscordCTA from "../components/DiscordCTA";
 
 type Post = {
   slug: string;
@@ -89,6 +90,7 @@ const Homepage: React.FC = () => {
           No blog post found.
         </p>
       )}
+      <DiscordCTA />
     </PageLayout>
   );
 };
