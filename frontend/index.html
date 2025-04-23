@@ -5,6 +5,23 @@
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Torrent Network</title>
+
+    <!-- Google Analytics (uses VITE_GA_MEASUREMENT_ID from .env) -->
+    <script type="module">
+      const GA_ID = import.meta.env.VITE_GA_MEASUREMENT_ID;
+      if (GA_ID) {
+        const gtagScript = document.createElement("script");
+        gtagScript.setAttribute("async", "");
+        gtagScript.src = `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`;
+        document.head.appendChild(gtagScript);
+
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { window.dataLayer.push(arguments); }
+        window.gtag = gtag;
+        gtag("js", new Date());
+        gtag("config", GA_ID);
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

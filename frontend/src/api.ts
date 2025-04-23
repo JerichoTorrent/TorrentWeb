@@ -4,10 +4,10 @@ type ApiSuccess = { success: true; message: string; token?: string };
 type ApiFailure = { success: false; error: string };
 type ApiResult = ApiSuccess | ApiFailure;
 
-// ✅ Login Request
+// Login Request
 export const loginUser = async (username: string, password: string): Promise<ApiResult> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password }),
@@ -20,7 +20,7 @@ export const loginUser = async (username: string, password: string): Promise<Api
       throw new Error(data.error || "Login failed.");
     }
 
-    // ✅ Store JWT Token & User Info
+    // Store JWT Token & User Info
     localStorage.setItem("authToken", data.token);
     localStorage.setItem("username", data.user.username);
     localStorage.setItem("uuid", data.user.uuid);
@@ -34,14 +34,14 @@ export const loginUser = async (username: string, password: string): Promise<Api
   }
 };
 
-// ✅ Registration Request
+// Registration Request
 export const registerUser = async (
   username: string,
   email: string,
   password: string
 ): Promise<ApiResult> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/auth/request-verification`, {
+    const response = await fetch(`${API_BASE_URL}/api/auth/request-verification`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, email, password }),
@@ -62,7 +62,7 @@ export const registerUser = async (
   }
 };
 
-// ✅ Logout Function (Clear JWT & Local Storage)
+// Logout Function (Clear JWT & Local Storage)
 export const logoutUser = (): void => {
   localStorage.removeItem("authToken");
   localStorage.removeItem("username");

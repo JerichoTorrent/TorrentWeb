@@ -66,7 +66,7 @@ const Register = () => {
     if (!email) return;
     setResending(true);
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/auth/resend-verification`, {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/auth/resend-verification`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
@@ -144,21 +144,23 @@ const Register = () => {
               )}
             </div>
 
-            <label className="flex items-center gap-2 text-sm text-gray-400">
+            <label className="flex items-start gap-2 text-sm text-gray-400">
               <input
                 type="checkbox"
                 checked={termsAccepted}
                 onChange={(e) => setTermsAccepted(e.target.checked)}
                 required
-                className="accent-yellow-400"
+                className="accent-yellow-400 mt-1"
               />
-              I accept the{" "}
-              <a
-                href="/terms"
-                className="text-purple-400 hover:text-yellow-300 underline transition"
-              >
-                Torrent Network Terms and Conditions
-              </a>
+              <span>
+                I accept the{" "}
+                <a
+                  href="/terms"
+                  className="text-purple-400 hover:text-yellow-300 underline transition"
+                >
+                  Torrent Network Terms and Conditions
+                </a>
+              </span>
             </label>
 
             <button

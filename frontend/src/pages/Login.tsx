@@ -1,5 +1,5 @@
 /** @jsxImportSource react */
-import { useState, useContext } from "react";
+import { useEffect, useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import AuthContext from "../context/AuthContext";
 import PageLayout from "../components/PageLayout";
@@ -14,6 +14,16 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showResend, setShowResend] = useState(false);
+  const [cooldown, setCooldown] = useState(60);
+  const [resending, setResending] = useState(false);
+
+  useEffect(() => {
+    if (showResend && cooldown > 0) {
+      const timer = setTimeout(() => setCooldown((c) => c - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [showResend, cooldown]);
 
   const handleLogin = async () => {
     if (isLoading) return;
@@ -27,7 +37,7 @@ const Login = () => {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
@@ -55,11 +65,38 @@ const Login = () => {
         setTimeout(() => navigate("/dashboard"), 1500);
       } else {
         setMessage(`❌ ${data.error || "Login failed."}`);
+        if (data.error === "Email not verified.") {
+          setShowResend(true);
+          setCooldown(60);
+        }
       }
     } catch {
       setMessage("❌ Failed to connect to the server.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (!username) return;
+    setResending(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/auth/resend-verification`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username }), // patched this a month later lol
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setMessage("✅ Verification email resent!");
+        setCooldown(60);
+      } else {
+        setMessage(`❌ ${data.error || "Resend failed."}`);
+      }
+    } catch {
+      setMessage("❌ Server error. Could not resend verification email.");
+    } finally {
+      setResending(false);
     }
   };
 
@@ -129,6 +166,19 @@ const Login = () => {
             >
               Register now
             </button>
+
+            {showResend && (
+              <div className="text-center mt-3 text-sm text-gray-400">
+                Didn’t get a code?{" "}
+                <button
+                  onClick={handleResend}
+                  disabled={cooldown > 0 || resending}
+                  className="text-purple-400 hover:text-yellow-300 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  {resending ? "Resending..." : `Resend Email${cooldown > 0 ? ` (${cooldown})` : ""}`}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -142,6 +142,53 @@ app.get("/api/metrics", (req, res) => {
   });
 });
 
+app.get("/auth/verify-email", async (req, res) => {
+  const { token } = req.query;
+  if (!token) return res.redirect(`${FRONTEND_URL}/verify-error`);
+
+  try {
+    console.log("🔑 Incoming verification token:", token);
+
+    const [user] = await db.query("SELECT * FROM users WHERE verification_token = ?", [token]);
+    if (!user.length) {
+      console.warn("❌ No user found for token:", token);
+      return res.redirect(`${FRONTEND_URL}/verify-error`);
+    }
+
+    const player = user[0];
+    console.log("✅ Found user:", player.username);
+
+    if (player.email_verified) {
+      console.log("ℹ️ Already verified:", player.username);
+      return res.redirect(`${FRONTEND_URL}/verify-success?token=already`);
+    }
+
+    const updateRes = await db.query(
+      "UPDATE users SET email_verified = 1, verification_token = NULL WHERE uuid = ?",
+      [player.uuid]
+    );
+
+    console.log("✅ Marked as verified:", player.username);
+
+    const jwtToken = jwt.sign(
+      {
+        uuid: insertUuidDashes(player.uuid),
+        username: player.username,
+        is_staff: player.is_staff === 1,
+      },
+      JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    console.log("🎫 Issued JWT:", jwtToken);
+
+    return res.redirect(`${FRONTEND_URL}/verify-success?token=${jwtToken}`);
+  } catch (err) {
+    console.error("💥 Verification error:", err);
+    return res.redirect(`${FRONTEND_URL}/verify-error`);
+  }
+});
+
 const router = express.Router();
 
 // Register
@@ -192,63 +239,38 @@ router.post("/auth/request-verification", async (req, res) => {
 
 // Resend Verification
 router.post("/auth/resend-verification", async (req, res) => {
-  const { email } = req.body;
-  if (!email) return res.status(400).json({ error: "Email is required." });
+  const { email, username } = req.body;
 
-  try {
-    const [user] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
-    res.json({ message: "Verification email was sent from the Torrent Network relay!" });
+  let targetEmail = email;
 
-    if (!user.length) return;
-    if (player.email_verified)
-      return res.status(400).json({ error: "Email already verified." });
-
-    const newToken = randomstring.generate(32);
-    await db.query("UPDATE users SET verification_token = ? WHERE email = ?", [newToken, email]);
-
-    const verificationLink = `${BACKEND_URL}/auth/verify-email?token=${newToken}`;
-
-    await transporter.sendMail({
-      from: EMAIL_SENDAS,
-      to: email,
-      subject: "Resend Verification - Torrent Network",
-      text: `Click to verify your email: ${verificationLink}`,
-    });
-
-    res.json({ message: "Verification email resent!" });
-  } catch (err) {
-    console.error("Resend error:", err);
-    res.status(500).json({ error: "Server error." });
+  if (!targetEmail && username) {
+    const [users] = await db.query("SELECT email FROM users WHERE username = ?", [username]);
+    if (!users.length) return res.status(404).json({ error: "User not found." });
+    targetEmail = users[0].email;
   }
-});
 
-// Verify Email
-router.get("/auth/verify-email", async (req, res) => {
-  const { token } = req.query;
-  if (!token) return res.status(400).json({ error: "Missing token." });
+  if (!targetEmail) return res.status(400).json({ error: "Email or username is required." });
 
-  try {
-    const [user] = await db.query("SELECT * FROM users WHERE verification_token = ?", [token]);
-    if (!user.length) return res.redirect(`${FRONTEND_URL}/verify-error`);
+  const [user] = await db.query("SELECT * FROM users WHERE email = ?", [targetEmail]);
+  if (!user.length) return res.status(404).json({ error: "User not found." });
 
-    const player = user[0];
-    await db.query("UPDATE users SET email_verified = 1, verification_token = NULL WHERE uuid = ?", [player.uuid]);
+  const player = user[0];
+  if (player.email_verified)
+    return res.status(400).json({ error: "Email already verified." });
 
-    const jwtToken = jwt.sign(
-      {
-        uuid: insertUuidDashes(player.uuid),
-        username: player.username,
-        is_staff: player.is_staff === 1,
-      },
-      JWT_SECRET,
-      { expiresIn: "7d" }
-    );
+  const newToken = randomstring.generate(32);
+  await db.query("UPDATE users SET verification_token = ? WHERE email = ?", [newToken, targetEmail]);
 
-    return res.redirect(`${FRONTEND_URL}/verify-success?token=${jwtToken}`);
-  } catch (err) {
-    console.error("Verification error:", err);
-    res.status(500).json({ error: "Server error." });
-  }
+  const verificationLink = `${BACKEND_URL}/auth/verify-email?token=${newToken}`;
+
+  await transporter.sendMail({
+    from: EMAIL_SENDAS,
+    to: targetEmail,
+    subject: "Resend Verification - Torrent Network",
+    text: `Click to verify your email: ${verificationLink}`,
+  });
+
+  res.json({ message: "Verification email resent!" });
 });
 
 // Login with rate limiter

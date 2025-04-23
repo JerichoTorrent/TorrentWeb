@@ -27,13 +27,13 @@ interface AuthUser extends DecodedToken {
 
 const AuthContext = createContext<{
   user: AuthUser | null;
-  login: (token: string) => void;
+  login: (token: string) => Promise<void>;
   logout: () => void;
   loading: boolean;
 }>({
   user: null,
-  login: () => {},
-  logout: () => {},
+  login: async () => { },
+  logout: () => { },
   loading: true,
 });
 
@@ -86,7 +86,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const login = (token: string) => {
+  const login = async (token: string): Promise<void> => {
     try {
       const decoded = jwtDecode<DecodedToken>(token);
       const now = Date.now() / 1000;
@@ -94,27 +94,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (decoded.exp && decoded.exp > now) {
         localStorage.setItem("authToken", token);
 
-        fetch(`/api/users/${decoded.username}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
-          .then(res => res.json())
-          .then(data => {
-            setUser({
-              token,
-              ...decoded,
-              level: data.level,
-              total_xp: data.total_xp,
-              badge: data.badge,
-              badges: data.badges,
-              about: data.about,
-              status: data.status,
-            });
-          })
-          .catch(() => {
-            setUser({ token, ...decoded });
+        try {
+          const res = await fetch(`/api/users/${decoded.username}`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           });
+          if (!res.ok) throw new Error("Failed to fetch user info");
+          const data = await res.json();
+
+          setUser({
+            token,
+            ...decoded,
+            level: data.level,
+            total_xp: data.total_xp,
+            badge: data.badge,
+            badges: data.badges,
+            about: data.about,
+            status: data.status,
+          });
+        } catch {
+          setUser({ token, ...decoded }); // fallback
+        }
       } else {
         console.warn("Login failed — token expired");
       }

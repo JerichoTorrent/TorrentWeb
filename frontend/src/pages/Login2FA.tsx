@@ -28,7 +28,7 @@ const Login2FA = () => {
     setMessage("");
 
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/2fa/verify-login`, {
+      const response = await fetch(`${API_BASE_URL}/api/auth/2fa/verify-login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ uuid, token: code }),

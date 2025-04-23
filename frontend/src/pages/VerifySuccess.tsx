@@ -13,9 +13,18 @@ const VerifySuccess = () => {
     const token = params.get("token");
 
     if (token) {
-      localStorage.setItem("authToken", token);
-      login(token); // Update global context
-      setTimeout(() => navigate("/"), 1500);
+      (async () => {
+        try {
+          localStorage.setItem("authToken", token);
+          await login(token); // Wait until user is set
+          navigate("/"); // Go home once user is fully logged in
+        } catch (err) {
+          console.error("Login via token failed:", err);
+          navigate("/verify-error");
+        }
+      })();
+    } else {
+      navigate("/verify-error");
     }
   }, [login, navigate]);
 

@@ -1,5 +1,5 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import { useContext } from "react";
+import { useLocation, BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { useContext, useEffect } from "react";
 import { AuthProvider } from "./context/AuthContext";
 import AuthContext from "./context/AuthContext";
 import Home from "./pages/Home";
@@ -42,6 +42,12 @@ import Login2FA from "./pages/Login2FA";
 import PublicProfilePage from "./pages/PublicProfile";
 import NewsFeedPage from "./pages/forums/NewsFeed";
 
+declare global {
+  interface Window {
+    gtag?: (...args: any[]) => void;
+  }
+}
+
 // Protected route for dashboard
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   const { user, loading } = useContext(AuthContext);
@@ -53,10 +59,39 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   return user ? children : <Navigate to="/login" />;
 };
 
+function usePageTracking() {
+  const location = useLocation();
+
+  useEffect(() => {
+    const gaId = import.meta.env.VITE_GA_MEASUREMENT_ID;
+    if (window.gtag && gaId) {
+      window.gtag("config", gaId, {
+        page_path: location.pathname,
+      });
+    }
+  }, [location]);
+}
+
+const PageTracker = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    const gaId = import.meta.env.VITE_GA_MEASUREMENT_ID;
+    if (window.gtag && gaId) {
+      window.gtag("config", gaId, {
+        page_path: location.pathname,
+      });
+    }
+  }, [location]);
+
+  return null;
+};
+
 function App() {
   return (
     <AuthProvider>
       <Router>
+        <PageTracker />
         <ScrollToTop />
         <Routes>
           <Route path="/" element={<Home />} />
