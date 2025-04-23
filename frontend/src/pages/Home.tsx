@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import PageLayout from "../components/PageLayout";
 import SplashHero from "../components/SplashHero";
 import DiscordCTA from "../components/DiscordCTA";
+import ChatWidget from "../components/ChatWidget";
 
 type Post = {
   slug: string;
@@ -91,6 +92,7 @@ const Homepage: React.FC = () => {
         </p>
       )}
       <DiscordCTA />
+      <ChatWidget />
     </PageLayout>
   );
 };

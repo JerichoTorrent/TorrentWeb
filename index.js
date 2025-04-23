@@ -27,6 +27,7 @@ import authenticateToken from "./middleware/authMiddleware.js";
 import "./bot.js";
 import "./cron/scheduler.js";
 import accountRoutes from "./routes/account.js";
+import { OpenAI } from "openai";
 
 dotenv.config();
 
@@ -426,7 +427,59 @@ router.get("/protected", authenticateToken, (req, res) => {
   res.json({ message: `Welcome, ${req.user.username}!`, user: req.user });
 });
 
-app.use(router);
+router.post("/ask", async (req, res) => {
+  const { message, threadId } = req.body;
+
+  if (!message) return res.status(400).json({ error: "Message required." });
+
+  try {
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+
+    // Create thread if needed
+    let thread = threadId;
+    if (!thread) {
+      const created = await openai.beta.threads.create();
+      thread = created.id;
+    }
+
+    // Add user message
+    await openai.beta.threads.messages.create(thread, {
+      role: "user",
+      content: message,
+    });
+
+    // Run the assistant
+    const run = await openai.beta.threads.runs.create(thread, {
+      assistant_id: process.env.OPENAI_ASSISTANT_ID,
+    });
+
+    // Poll until done
+    let runStatus = run.status;
+    while (runStatus !== "completed" && runStatus !== "failed") {
+      await new Promise((r) => setTimeout(r, 1000));
+      const runCheck = await openai.beta.threads.runs.retrieve(thread, run.id);
+      runStatus = runCheck.status;
+    }
+
+    if (runStatus === "failed") throw new Error("Assistant run failed");
+
+    // Get assistant reply
+    const messages = await openai.beta.threads.messages.list(thread);
+    const last = messages.data.find((m) => m.role === "assistant");
+
+    res.json({
+      threadId: thread,
+      reply: last?.content?.[0]?.text?.value || "No reply found.",
+    });
+  } catch (err) {
+    console.error("❌ AI Assistant Error:", err);
+    res.status(500).json({ error: "Failed to get assistant reply." });
+  }
+});
+
+app.use("/api", router);
 
 // Root API
 app.get("/api", (req, res) => {
