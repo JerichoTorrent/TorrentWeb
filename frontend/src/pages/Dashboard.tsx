@@ -99,7 +99,7 @@ const Dashboard = () => {
         {/* Cover Photo */}
         <div
           className="relative bg-cover bg-center h-48 sm:h-64"
-          style={{ backgroundImage: `url("${profile.coverUrl || "/default-cover.webp"}")` }}
+          style={{ backgroundImage: `url(${profile.coverUrl && profile.coverUrl !== "null" ? profile.coverUrl : "/default-cover.webp"})` }}
         >
           <div className="absolute bottom-0 left-6 transform translate-y-1/2 z-10 flex items-center gap-3">
             <img

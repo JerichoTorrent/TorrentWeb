@@ -159,7 +159,7 @@ const PublicProfilePage = () => {
         {/* Cover Photo */}
         <div
           className="relative bg-cover bg-center h-48 sm:h-64"
-          style={{ backgroundImage: `url("${user.coverUrl || '/default-cover.webp'}")` }}
+          style={{ backgroundImage: `url(${user.coverUrl && user.coverUrl !== "null" ? user.coverUrl : "/default-cover.webp"})` }}
         >
           {/* Actions */}
           <div className="absolute top-2 right-4 flex gap-2 z-10">

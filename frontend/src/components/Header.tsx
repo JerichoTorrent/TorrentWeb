@@ -141,7 +141,7 @@ const Header = () => {
                   <div className="grid grid-cols-2 gap-2 mb-3">
                     <button onClick={() => { navigate("/dashboard"); setOpen(false); }} className="text-left hover:text-yellow-400">Your Dashboard</button>
                     <button onClick={() => setOpen(false)} className="text-right hover:text-yellow-400">Following</button>
-                    <button onClick={() => setOpen(false)} className="text-left hover:text-yellow-400">News Feed</button>
+                      <button onClick={() => { navigate("/forums/feed"); setOpen(false); }} className="text-left hover:text-yellow-400">News Feed</button>
                     <button onClick={() => setOpen(false)} className="text-right hover:text-yellow-400">Blocked</button>
                   </div>
                   <button

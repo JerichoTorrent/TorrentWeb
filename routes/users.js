@@ -82,7 +82,7 @@ router.get("/public/:username", async (req, res) => {
 
   try {
     const [users] = await db.query(
-      `SELECT uuid, username, created_at, last_login, reputation, status, about, chosen_badge FROM users WHERE username = ?`,
+      `SELECT uuid, username, created_at, last_login, reputation, status, about, chosen_badge, coverUrl FROM users WHERE username = ?`,
       [username]
     );
 
@@ -188,6 +188,7 @@ router.get("/public/:username", async (req, res) => {
       stats: gamemodeStats,
       status: user.status,
       about: user.about,
+      coverUrl: user.coverUrl || null,
     };
 
     res.json(response);

@@ -58,6 +58,7 @@ app.use("/api/forums", forumRoutes);
 app.use("/api/forums", forumActionsRoutes);
 app.use(forumUploadRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/covers", express.static(path.join(__dirname, "../frontend/public/uploads/covers")));
 app.use("/api/users", usersRoutes);
 app.use(statsRoutes);
 app.use(
