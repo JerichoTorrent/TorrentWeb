@@ -26,6 +26,7 @@ const upload = multer({
 });
 
 router.patch("/profile-settings", authenticate, upload.single("cover"), async (req, res) => {
+  console.log("✅ Request from account settings");
   const { about, status, chosen_badge } = req.body;
   const userUUID = req.user.uuid;
 
@@ -35,31 +36,39 @@ router.patch("/profile-settings", authenticate, upload.single("cover"), async (r
   let coverUrl = null;
 
   try {
-    if (req.file) {
-      const webpPath = `/uploads/covers/${req.user.uuid}.webp`;
+    if (req.file && req.file.buffer) {
+      const webpPath = `/covers/${req.user.uuid}.webp`;
       const fullOutputPath = path.join(__dirname, "../frontend/public", webpPath);
       fs.mkdirSync(path.dirname(fullOutputPath), { recursive: true });
-      const buffer = await sharp(req.file.buffer)
-        .resize({
-          width: 1920,
-          withoutEnlargement: true,
-          fit: "cover",
-        })
-        .toFormat("webp")
-        .toBuffer();
-      console.log("Buffer size:", buffer.length);
+
+      let buffer;
+      try {
+        buffer = await sharp(req.file.buffer)
+          .resize({
+            width: 1920,
+            withoutEnlargement: true,
+            fit: "cover",
+          })
+          .toFormat("webp")
+          .toBuffer();
+      } catch (err) {
+        console.error("❌ Sharp failed:", err);
+        return res.status(400).json({ error: "Invalid image file." });
+      }
+
       const passedModeration = await moderateImage(buffer);
       if (!passedModeration) {
         return res.status(400).json({ error: "Image failed moderation." });
       }
-      console.log("Saving to:", fullOutputPath);
+
       try {
         fs.writeFileSync(fullOutputPath, buffer);
         console.log("✅ File saved");
+        coverUrl = webpPath;
       } catch (err) {
         console.error("❌ Failed to write file:", err);
+        return res.status(500).json({ error: "Failed to save image." });
       }
-      coverUrl = webpPath;
     }
 
     await db.query(

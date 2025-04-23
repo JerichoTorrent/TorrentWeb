@@ -67,7 +67,13 @@ const AccountPage = () => {
         body: formData,
       });
 
-      const data = await res.json();
+      const text = await res.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error("Unexpected server response.");
+      }
       if (!res.ok) throw new Error(data.error || "Update failed");
 
       setMessage("✅ Profile updated successfully.");

@@ -118,6 +118,7 @@ const NewThreadPage = () => {
   const handleImageUpload = async (files: FileList, retrying: boolean = false) => {
     const validFiles = Array.from(files).slice(0, 5 - uploadedImages.length);
     setUploading(true);
+
     try {
       for (const file of validFiles) {
         if (file.size > 3 * 1024 * 1024) {
@@ -136,55 +137,48 @@ const NewThreadPage = () => {
           },
           body: formData,
         });
-      // If token expired and we haven't retried yet
-      if (res.status === 401 && !retrying) {
-        console.warn("Upload token expired. Fetching new token...");
-        const tokenRes = await fetch("/api/forums/auth/upload-token", {
-          headers: {
-            Authorization: `Bearer ${user?.token}`,
-          },
-        });
-        const tokenData = await tokenRes.json();
-        if (tokenRes.ok && tokenData.token) {
-          setUploadToken(tokenData.token);
-          return handleImageUpload(files, true); // Retry once
-        } else {
-          alert("Failed to refresh upload token.");
-          break;
-        }
-      }
-        const data = await res.json();
 
-        if (res.ok && data.url) {
-          setUploadedImages((prev) => [...prev, data.url]);
-          setContent((prev) => `${prev}\n![](${data.url})`);
-        } else {
-          if (res.status === 401 && !retrying) {
-            console.warn("Upload token expired. Refreshing...");
-            try {
-              const tokenRes = await fetch("/api/forums/auth/upload-token", {
-                headers: {
-                  Authorization: `Bearer ${user?.token}`,
-                },
-              });
-              const tokenData = await tokenRes.json();
-              if (tokenRes.ok && tokenData.token) {
-                setUploadToken(tokenData.token);
-                alert("Upload token expired. Please try uploading that image again.");
-                return; // exit this upload attempt
-              } else {
-                setUploadToken(null);
-                alert("Upload token expired. Please try uploading again.");
-              }
-            } catch (err) {
-              console.error("Failed to refresh upload token:", err);
-              setUploadToken(null);
-              alert("Upload token expired. Please try again.");
-            }
+        // Handle expired token BEFORE parsing
+        if (res.status === 401 && !retrying) {
+          console.warn("Upload token expired. Fetching new token...");
+          const tokenRes = await fetch("/api/forums/auth/upload-token", {
+            headers: {
+              Authorization: `Bearer ${user?.token}`,
+            },
+          });
+          const tokenData = await tokenRes.json();
+
+          if (tokenRes.ok && tokenData.token) {
+            setUploadToken(tokenData.token);
+            return handleImageUpload(files, true); // Retry once
           } else {
-            alert(data.error || `Upload failed for ${file.name}`);
+            alert("Failed to refresh upload token.");
+            continue;
           }
-        }           
+        }
+
+        // Parse the response safely
+        const text = await res.text();
+        let data: any;
+
+        try {
+          data = JSON.parse(text);
+        } catch {
+          console.error("Server returned invalid JSON:", text);
+          alert("Upload failed. Unexpected server response.");
+          continue;
+        }
+
+        // Only insert image ONCE and only if valid
+        if (res.ok && data.url) {
+          // Avoid duplicates (just in case)
+          if (!uploadedImages.includes(data.url)) {
+            setUploadedImages((prev) => [...prev, data.url]);
+            setContent((prev) => `${prev}\n![](${data.url})`);
+          }
+        } else {
+          alert(data.error || `Upload failed for ${file.name}`);
+        }
       }
     } catch (err) {
       console.error("Upload error:", err);

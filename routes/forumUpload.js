@@ -16,7 +16,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const UPLOAD_DIR = path.join(__dirname, "../uploads/forum_images");
-
 if (!fs.existsSync(UPLOAD_DIR)) {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 }
@@ -39,47 +38,19 @@ const upload = multer({
   },
 });
 
-// Middleware to validate tokens
-router.use("/api/forums/upload-image", (req, res, next) => {
-  const authHeader = req.headers["authorization"];
-  const uploadToken = req.headers["x-upload-token"];
-
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({ error: "Missing or invalid auth token" });
-  }
-
-  if (!uploadToken || typeof uploadToken !== "string" || uploadToken.length < 10) {
-    return res.status(403).json({ error: "Missing or invalid upload token" });
-  }
-
-  try {
-    const token = authHeader.split(" ")[1];
-    jwt.verify(token, process.env.JWT_SECRET); // just verifies it's a real user
-    next();
-  } catch (err) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-});
-
-// Static route to serve uploaded images, secure headers
-router.use("/uploads/forum_images", express.static(UPLOAD_DIR, {
-  setHeaders: (res, _) => {
-    res.setHeader("Content-Security-Policy", "default-src 'none'");
-    res.setHeader("X-Content-Type-Options", "nosniff");
-    res.setHeader("Cache-Control", "public, max-age=31536000");
-  },
-}));
-
-// Upload endpoint
-router.post("/api/forums/upload-image", upload.single("image"), async (req, res) => {
+// Async image handler
+async function uploadImageHandler(req, res) {
   if (!req.file) return res.status(400).json({ error: "No image uploaded." });
 
+  const filePath = req.file.path;
   const fileUrl = `${process.env.BACKEND_URL}/uploads/forum_images/${req.file.filename}`;
   const allowedMimes = ["image/jpeg", "image/png"];
+
   if (!allowedMimes.includes(req.file.mimetype)) {
-    try { fs.unlinkSync(req.file.path); } catch (_) {}
+    try { fs.unlinkSync(filePath); } catch { }
     return res.status(400).json({ error: "Invalid image type." });
   }
+
   try {
     const modRes = await fetch("https://api.openai.com/v1/moderations", {
       method: "POST",
@@ -94,29 +65,77 @@ router.post("/api/forums/upload-image", upload.single("image"), async (req, res)
     const categories = result?.results?.[0]?.categories;
 
     if (categories?.sexual || categories?.violence || categories?.["violence/graphic"]) {
-      try { fs.unlinkSync(req.file.path); } catch (_) {}
+      try { fs.unlinkSync(filePath); } catch { }
       return res.status(400).json({ error: "Image failed moderation check." });
     }
 
-    const authToken = req.headers["authorization"]?.split(" ")[1];
+    const authToken = req.headers["authorization"].split(" ")[1];
     const decoded = jwtDecode(authToken);
     const userId = decoded.uuid;
 
     await db.query(
       `INSERT INTO forum_uploads (user_id, image_url, upload_time, last_accessed)
-      VALUES (?, ?, NOW(), NOW())`,
+       VALUES (?, ?, NOW(), NOW())`,
       [userId, fileUrl]
     );
 
     return res.json({ url: fileUrl });
   } catch (err) {
-    console.error("Moderation error:", err);
-    try { fs.unlinkSync(req.file.path); } catch (_) {}
+    console.error("Upload error:", err);
+    try { fs.unlinkSync(filePath); } catch { }
     return res.status(500).json({ error: "Image moderation failed." });
+  }
+}
+
+// Auth middleware for upload token
+router.use("/api/forums/upload-image", (req, res, next) => {
+  const authHeader = req.headers["authorization"];
+  const uploadToken = req.headers["x-upload-token"];
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Missing or invalid auth token" });
+  }
+  if (!uploadToken || typeof uploadToken !== "string" || uploadToken.length < 10) {
+    return res.status(403).json({ error: "Missing or invalid upload token" });
+  }
+
+  try {
+    const token = authHeader.split(" ")[1];
+    jwt.verify(token, process.env.JWT_SECRET);
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: "Unauthorized" });
   }
 });
 
-// Ping route for checking activity of user upload process
+// Serve uploaded images securely
+router.use("/uploads/forum_images", express.static(UPLOAD_DIR, {
+  setHeaders: (res) => {
+    res.setHeader("Content-Security-Policy", "default-src 'none'");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Cache-Control", "public, max-age=31536000");
+  },
+}));
+
+
+// Upload endpoint
+router.post("/api/forums/upload-image", (req, res, next) => {
+  upload.single("image")(req, res, function (err) {
+    if (err) {
+      console.error("❌ Multer error:", err);
+      if (err.code === "LIMIT_FILE_SIZE") {
+        return res.status(400).json({ error: "File too large (max 5MB)." });
+      }
+      return res.status(400).json({ error: err.message || "Upload error." });
+    }
+
+    // Delegate to handler if no Multer error
+    uploadImageHandler(req, res).catch(next);
+  });
+});
+
+
+// Ping to keep uploads alive
 router.post("/api/forums/uploads/ping", async (req, res) => {
   const authHeader = req.headers["authorization"];
   if (!authHeader?.startsWith("Bearer ")) {
