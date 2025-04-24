@@ -1,27 +1,26 @@
-const jwt = require("jsonwebtoken");
-const mysql = require("mysql2/promise");
-require("dotenv").config();
+import jwt from "jsonwebtoken";
+import mysql from "mysql2/promise";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 function insertUuidDashes(uuid) {
   if (!uuid || uuid.length !== 32) return uuid;
   return uuid.replace(/^(.{8})(.{4})(.{4})(.{4})(.{12})$/, "$1-$2-$3-$4-$5");
 }
 
-module.exports = async function authenticateToken(req, res, next) {
+const requireAuth = async function (req, res, next) {
   let token = null;
 
-  // Try Authorization header
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith("Bearer ")) {
     token = authHeader.split(" ")[1];
   }
 
-  // Fallback: token in query param
   if (!token && req.query.token) {
     token = req.query.token;
   }
 
-  // Final guard: empty or junk token
   if (!token || token === "undefined" || token.length < 10) {
     return res.status(401).json({ error: "Access denied. No valid token provided." });
   }
@@ -75,3 +74,5 @@ module.exports = async function authenticateToken(req, res, next) {
     res.status(403).json({ error: "Invalid or expired token." });
   }
 };
+
+export default requireAuth;

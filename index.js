@@ -24,7 +24,6 @@ import blogRoutes from "./routes/blog.js";
 import bansRoutes from "./routes/bans.js";
 import appealsRoutes from "./routes/appeals.js";
 import authenticateToken from "./middleware/authMiddleware.js";
-import "./bot.js";
 import "./cron/scheduler.js";
 import accountRoutes from "./routes/account.js";
 import { OpenAI } from "openai";
@@ -59,8 +58,8 @@ app.use("/api/forums", forumRoutes);
 app.use("/api/forums", forumActionsRoutes);
 app.use(forumUploadRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-console.log("✅ Serving /covers from:", path.join(__dirname, "/frontend/public/covers"));
-app.use("/covers", express.static(path.join(__dirname, "/frontend/public/covers")));
+console.log("✅ Serving /covers from:", path.join(__dirname, "frontend/public/covers"));
+app.use("/covers", express.static(path.join(__dirname, "frontend/public/covers")));
 app.use("/api/users", usersRoutes);
 app.use(statsRoutes);
 app.use(

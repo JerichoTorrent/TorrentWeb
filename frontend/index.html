@@ -1,30 +1,48 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Torrent Network</title>
 
-    <!-- Google Analytics (uses VITE_GA_MEASUREMENT_ID from .env) -->
-    <script type="module">
-      const GA_ID = import.meta.env.VITE_GA_MEASUREMENT_ID;
-      if (GA_ID) {
-        const gtagScript = document.createElement("script");
-        gtagScript.setAttribute("async", "");
-        gtagScript.src = `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`;
-        document.head.appendChild(gtagScript);
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Torrent Network</title>
 
-        window.dataLayer = window.dataLayer || [];
-        function gtag() { window.dataLayer.push(arguments); }
-        window.gtag = gtag;
-        gtag("js", new Date());
-        gtag("config", GA_ID);
-      }
-    </script>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+  <!-- Open Graph Meta Tags -->
+  <meta property="og:title" content="Torrent Network" />
+  <meta property="og:description"
+    content="A full-featured Minecraft server site with forums, stats, profiles, and more." />
+  <meta property="og:image" content="https://torrentsmp.com/assets/og-banner.png" />
+  <meta property="og:url" content="https://torrentsmp.com/" />
+  <meta property="og:type" content="website" />
+
+  <!-- Twitter Card Meta Tags -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Torrent Network" />
+  <meta name="twitter:description"
+    content="A full-featured Minecraft server site with forums, stats, profiles, and more." />
+  <meta name="twitter:image" content="https://torrentsmp.com/assets/og-banner.png" />
+
+  <!-- Google Analytics (uses VITE_GA_MEASUREMENT_ID from .env) -->
+  <script type="module">
+    const GA_ID = import.meta.env.VITE_GA_MEASUREMENT_ID;
+    if (GA_ID) {
+      const gtagScript = document.createElement("script");
+      gtagScript.setAttribute("async", "");
+      gtagScript.src = `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`;
+      document.head.appendChild(gtagScript);
+
+      window.dataLayer = window.dataLayer || [];
+      function gtag() { window.dataLayer.push(arguments); }
+      window.gtag = gtag;
+      gtag("js", new Date());
+      gtag("config", GA_ID);
+    }
+  </script>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
 </html>

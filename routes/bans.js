@@ -163,7 +163,7 @@ router.get("/counts", async (req, res) => {
 });
 
 // Discord link status check
-router.get("/api/discord/check-link", requireAuth, async (req, res) => {
+router.get("/discord/check-link", requireAuth, async (req, res) => {
   try {
     const linked = !!req.user?.discordId;
 

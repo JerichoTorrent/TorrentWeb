@@ -1,13 +1,12 @@
-const {
+import {
   Client,
   GatewayIntentBits,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
   EmbedBuilder
-} = require("discord.js");
-const { S3Client } = require("@aws-sdk/client-s3"); // DeleteObjectCommand removed
-const nodemailer = require("nodemailer");
+} from "discord.js";
+import { S3Client } from "@aws-sdk/client-s3";
 
 const client = new Client({
   intents: [
@@ -19,7 +18,7 @@ const client = new Client({
 
 client.login(process.env.DISCORD_BOT_TOKEN);
 
-// R2 S3 setup (optional, in case used in future utilities)
+// R2 S3 setup
 const s3 = new S3Client({
   region: "auto",
   endpoint: process.env.R2_ENDPOINT,
@@ -29,8 +28,7 @@ const s3 = new S3Client({
   }
 });
 
-// Send appeal embed to Discord
-async function sendAppealPanel({ id, type, username, message, files, uuid }) {
+export async function sendAppealPanel({ id, type, username, message, files, uuid }) {
   try {
     const channel = await client.channels.fetch(process.env.DISCORD_CHANNEL_ID);
     if (!channel) return;
@@ -75,8 +73,7 @@ async function sendAppealPanel({ id, type, username, message, files, uuid }) {
   }
 }
 
-// Check if a Discord user is currently punished
-async function checkDiscordPunishment(discordId) {
+export async function checkDiscordPunishment(discordId) {
   try {
     const guild = await client.guilds.fetch(process.env.DISCORD_GUILD_ID);
     const bans = await guild.bans.fetch().catch(() => new Map());
@@ -107,8 +104,4 @@ async function checkDiscordPunishment(discordId) {
   }
 }
 
-module.exports = {
-  client,
-  sendAppealPanel,
-  checkDiscordPunishment
-};
+export { client, s3 };

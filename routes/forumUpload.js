@@ -88,7 +88,7 @@ async function uploadImageHandler(req, res) {
 }
 
 // Auth middleware for upload token
-router.use("/api/forums/upload-image", (req, res, next) => {
+router.use("/forums/upload-image", (req, res, next) => {
   const authHeader = req.headers["authorization"];
   const uploadToken = req.headers["x-upload-token"];
 
@@ -119,7 +119,7 @@ router.use("/uploads/forum_images", express.static(UPLOAD_DIR, {
 
 
 // Upload endpoint
-router.post("/api/forums/upload-image", (req, res, next) => {
+router.post("/forums/upload-image", (req, res, next) => {
   upload.single("image")(req, res, function (err) {
     if (err) {
       console.error("❌ Multer error:", err);
@@ -136,7 +136,7 @@ router.post("/api/forums/upload-image", (req, res, next) => {
 
 
 // Ping to keep uploads alive
-router.post("/api/forums/uploads/ping", async (req, res) => {
+router.post("/forums/uploads/ping", async (req, res) => {
   const authHeader = req.headers["authorization"];
   if (!authHeader?.startsWith("Bearer ")) {
     return res.status(401).json({ error: "Missing token" });

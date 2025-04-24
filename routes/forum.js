@@ -351,21 +351,6 @@ router.get("/auth/upload-token", authMiddleware, (req, res) => {
   res.json({ token });
 });
 
-// GET mentions (future for notifications)
-router.get("/:uuid", async (req, res) => {
-  const uuid = req.params.uuid;
-  const [rows] = await db.query(`
-    SELECT m.*, t.title AS thread_title
-    FROM mentions m
-    LEFT JOIN forum_threads t ON m.post_type = 'thread' AND m.post_id = t.id
-    WHERE m.mentioned_uuid = ?
-    ORDER BY m.created_at DESC
-    LIMIT 10
-  `, [uuid]);
-
-  res.json(rows);
-});
-
 router.post("/threads", authMiddleware, limitThreadPosts, async (req, res) => {
   const { title, content, category_id, is_sticky = false, is_private = false } = req.body;
   const userId = req.user.uuid;

@@ -43,7 +43,6 @@ function insertUuidDashes(uuid) {
 }
 
 const router = express.Router();
-const app = globalThis.__app || express();
 
 export const discordClient = new Client({
   intents: [
@@ -317,5 +316,4 @@ async function updateAppealPanel(appealId, staffUser, status) {
   }
 }
 
-app.use("/api", router);
 export default router;
