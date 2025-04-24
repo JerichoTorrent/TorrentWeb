@@ -88,7 +88,7 @@ async function uploadImageHandler(req, res) {
 }
 
 // Auth middleware for upload token
-router.use("/forums/upload-image", (req, res, next) => {
+router.use("/upload-image", (req, res, next) => {
   const authHeader = req.headers["authorization"];
   const uploadToken = req.headers["x-upload-token"];
 
@@ -109,7 +109,7 @@ router.use("/forums/upload-image", (req, res, next) => {
 });
 
 // Serve uploaded images securely
-router.use("/uploads/forum_images", express.static(UPLOAD_DIR, {
+router.use("/forum_images", express.static(UPLOAD_DIR, {
   setHeaders: (res) => {
     res.setHeader("Content-Security-Policy", "default-src 'none'");
     res.setHeader("X-Content-Type-Options", "nosniff");
@@ -119,7 +119,7 @@ router.use("/uploads/forum_images", express.static(UPLOAD_DIR, {
 
 
 // Upload endpoint
-router.post("/forums/upload-image", (req, res, next) => {
+router.post("/upload-image", (req, res, next) => {
   upload.single("image")(req, res, function (err) {
     if (err) {
       console.error("❌ Multer error:", err);

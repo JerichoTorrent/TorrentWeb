@@ -42,7 +42,7 @@ const getTopPlayer = async () => {
   return rows[0] || null;
 };
 
-router.get("/stats/gamemodes", async (req, res) => {
+router.get("/gamemodes", async (req, res) => {
   try {
     const [rows] = await statsPool.query(
       `SELECT server AS id, COUNT(DISTINCT uuid) AS playerCount
@@ -74,7 +74,7 @@ router.get("/stats/gamemodes", async (req, res) => {
   }
 });
 
-router.get("/stats/showcase", async (req, res) => {
+router.get("/showcase", async (req, res) => {
   try {
     const showcases = [];
 
@@ -116,7 +116,7 @@ router.get("/stats/showcase", async (req, res) => {
   }
 });
 
-router.get("/stats/:server", async (req, res) => {
+router.get("/:server", async (req, res) => {
   const { server } = req.params;
   const category = req.query.category || "main";
   const search = req.query.search || "";

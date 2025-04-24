@@ -56,12 +56,11 @@ app.use("/api/appeals", appealsRoutes);
 app.use("/api", discordRoutes);
 app.use("/api/forums", forumRoutes);
 app.use("/api/forums", forumActionsRoutes);
-app.use(forumUploadRoutes);
+app.use("/api", forumUploadRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-console.log("✅ Serving /covers from:", path.join(__dirname, "frontend/public/covers"));
 app.use("/covers", express.static(path.join(__dirname, "frontend/public/covers")));
 app.use("/api/users", usersRoutes);
-app.use(statsRoutes);
+app.use("/api/stats", statsRoutes);
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "changeme-torrent-secret",
@@ -182,7 +181,7 @@ app.get("/auth/verify-email", async (req, res) => {
 
     console.log("🎫 Issued JWT:", jwtToken);
 
-    return res.redirect(`${FRONTEND_URL}/verify-success?token=${jwtToken}`);
+    return res.redirect(`${FRONTEND_URL}/verify-success?token=${encodeURIComponent(jwtToken)}`);
   } catch (err) {
     console.error("💥 Verification error:", err);
     return res.redirect(`${FRONTEND_URL}/verify-error`);
@@ -510,7 +509,7 @@ app.get("/api", (req, res) => {
 
 // Production fallback for React routes
 app.use(express.static(FRONTEND_BUILD_PATH));
-app.get("*", (req, res) => {
+app.get(/^\/(?!api\/|auth\/|uploads\/|covers\/).*/, (req, res) => {
   res.sendFile(path.join(FRONTEND_BUILD_PATH, "index.html"));
 });
 
