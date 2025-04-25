@@ -49,8 +49,17 @@ router.get("/threads", async (req, res) => {
   const limit = parseInt(req.query.limit) || 10;
   const offset = (page - 1) * limit;
   const categorySlug = req.query.category;
-  const whereWithAlias = "WHERE t.deleted = FALSE" + (categorySlug ? " AND t.category_id = ?" : "");
-  const whereNoAlias = "WHERE deleted = FALSE" + (categorySlug ? " AND category_id = ?" : "");
+
+  // Get token but don't 401 the whole page
+  let user = null;
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith("Bearer ")) {
+    try {
+      user = jwt.verify(authHeader.split(" ")[1], process.env.JWT_SECRET);
+    } catch {
+      // Invalid token, ignore
+    }
+  }
 
   try {
     let params = [];
@@ -65,7 +74,7 @@ router.get("/threads", async (req, res) => {
     const [rows] = await db.query(`
       SELECT 
         t.id, t.user_id, t.title, t.content, t.created_at,
-        t.category_id, t.is_sticky, t.deleted,
+        t.category_id, t.is_sticky, t.deleted, t.is_private,
         u.username, c.slug AS category_slug, c.name AS category_name,
         COALESCE(SUM(CASE 
           WHEN r.reaction = 'upvote' THEN 1
@@ -82,8 +91,14 @@ router.get("/threads", async (req, res) => {
       LIMIT ? OFFSET ?
     `, [...params, limit, offset]);
 
-    // Sanitize deleted threads (if shown in future)
-    const threads = rows.map((thread) => {
+    // Filter private threads unless viewer is staff or owner
+    const filtered = rows.filter(thread => {
+      if (!thread.is_private) return true;
+      if (!user) return false;
+      return user.uuid === thread.user_id || user.is_staff;
+    });
+
+    const threads = filtered.map((thread) => {
       if (thread.deleted) {
         return {
           ...thread,
@@ -98,11 +113,7 @@ router.get("/threads", async (req, res) => {
       };
     });
 
-    const [[{ count }]] = await db.query(`
-      SELECT COUNT(*) as count FROM forum_threads ${whereNoAlias}
-    `, params);
-
-    res.json({ threads, total: count });
+    res.json({ threads, total: threads.length }); // Only return filtered count (extra but why not)
   } catch (err) {
     console.error("Error fetching threads:", err);
     res.status(500).json({ error: "Internal server error" });

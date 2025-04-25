@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import PageLayout from "../../components/PageLayout";
 import ThreadsList from "../../components/forums/ThreadsList";
 import AuthContext from "../../context/AuthContext";
+import { Thread } from "../../types";
 
 const NewsFeedPage = () => {
     const { user } = useContext(AuthContext);
@@ -27,8 +28,13 @@ const NewsFeedPage = () => {
                 }
             );
             const data = await res.json();
-            setThreads(data.threads || []);
-            setTotal(data.total || 0);
+            const visible = (data.threads || []).filter((thread: Thread) => {
+                if (!thread.is_private) return true;
+                return thread.user_id === user.uuid || user.is_staff;
+            });
+
+            setThreads(visible);
+            setTotal(visible.length);
         } catch (err) {
             setThreads([]);
         } finally {

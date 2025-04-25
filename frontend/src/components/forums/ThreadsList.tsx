@@ -28,7 +28,12 @@ const ThreadsList = ({ threads: externalThreads, categorySlug, disableStickies =
         ? `/api/forums/threads?category=${categorySlug}&page=${page}&limit=${limit}`
         : `/api/forums/threads?page=${page}&limit=${limit}`;
 
-      const res = await fetch(url);
+      const headers: HeadersInit = {
+        "Content-Type": "application/json",
+        ...(user?.token ? { Authorization: `Bearer ${user.token}` } : {}),
+      };
+
+      const res = await fetch(url, { headers });
       const data = await res.json();
 
       const visibleThreads = (data.threads || []).filter((thread: Thread) => {
