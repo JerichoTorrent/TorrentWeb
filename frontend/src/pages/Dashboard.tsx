@@ -3,7 +3,7 @@ import { useContext, useEffect, useState } from "react";
 import PageLayout from "../components/PageLayout";
 import AuthContext from "../context/AuthContext";
 import ProfileStatTable from "../components/stats/ProfileStatTable";
-import { getXpProgress } from "../utils/xpUtils";
+import { calculateLevel, getXpProgress } from "../utils/xpUtils";
 import { useNavigate } from "react-router-dom";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -89,8 +89,8 @@ const Dashboard = () => {
     );
   }
 
-  const level = user?.level ?? 0;
   const totalXp = user?.total_xp ?? 0;
+  const level = calculateLevel(totalXp);
   const { currentLevelXp, nextLevelXp, progressPercent } = getXpProgress(level, totalXp);
 
   return (

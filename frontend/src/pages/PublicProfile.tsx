@@ -6,6 +6,7 @@ import ProfileStatTable from "../components/stats/ProfileStatTable";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import AuthContext from "../context/AuthContext";
+import { calculateLevel, getXpProgress } from "../utils/xpUtils";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -47,6 +48,7 @@ interface ThreadSummary {
 }
 
 interface PublicUserProfile {
+  total_xp: number;
   about?: string;
   status?: string;
   level: number;
@@ -76,6 +78,7 @@ const PublicProfilePage = () => {
   const { user: authUser } = useContext(AuthContext);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followersList, setFollowersList] = useState<{ uuid: string; username: string }[]>([]);
+  
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/api/users/public/${username}`, { credentials: "include" })
@@ -153,6 +156,9 @@ const PublicProfilePage = () => {
   if (loading) return <PageLayout fullWidth><p className="text-white">Loading profile...</p></PageLayout>;
   if (!user) return <PageLayout fullWidth><p className="text-red-400 text-center">User not found.</p></PageLayout>;
 
+  const totalXp = user.total_xp ?? 0;
+  const level = calculateLevel(totalXp);
+
   return (
     <PageLayout fullWidth>
       <div className="bg-[#1e1e22] border border-gray-700 rounded-lg overflow-hidden max-w-6xl mx-auto mt-8 shadow-xl">
@@ -175,7 +181,7 @@ const PublicProfilePage = () => {
               alt="Avatar"
             />
             <div className="mt-16 text-sm sm:text-base text-white font-semibold">
-              Level {user.level ?? 0}
+              Level {level}
             </div>
           </div>
         </div>

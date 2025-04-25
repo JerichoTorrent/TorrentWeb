@@ -32,13 +32,17 @@ export async function awardXp(db, userId, baseType) {
   );
   if (!rows.length) return;
 
-  const { total_xp = 0, xp_this_week = 0, reputation = 0 } = rows[0];
+  const { total_xp = 0, level: currentLevel = 0, xp_this_week = 0, reputation = 0 } = rows[0];
 
   const weight = getRepWeight(reputation);
   const weightedXp = Math.round(baseXp * weight);
   const newTotalXp = total_xp + weightedXp;
   const newLevel = calculateLevel(newTotalXp);
   const newXpThisWeek = xp_this_week + weightedXp;
+
+  if (newLevel > currentLevel) {
+    console.log(`🎉 User ${userId} leveled up! ${currentLevel} → ${newLevel}`);
+  }
 
   await db.query(
     "UPDATE users SET total_xp = ?, level = ?, last_xp_gain = NOW(), xp_this_week = ? WHERE uuid = ?",

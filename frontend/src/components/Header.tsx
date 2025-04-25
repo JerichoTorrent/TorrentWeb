@@ -4,7 +4,7 @@ import { useContext, useEffect, useRef, useState } from "react";
 import AuthContext from "../context/AuthContext";
 import { logoutUser } from "../api";
 import ParticleBackground from "./ParticleBackground";
-import { getXpForLevel, getXpProgress } from "../utils/xpUtils";
+import { calculateLevel, getXpProgress } from "../utils/xpUtils";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const MCSTATUS_URL = import.meta.env.VITE_MCSTATUS_URL;
@@ -13,10 +13,11 @@ const DISCORD_URL = import.meta.env.VITE_DISCORD_URL;
 const Header = () => {
   const navigate = useNavigate();
   const { user, logout } = useContext(AuthContext);
-  const level = user?.level ?? 0;
-  const totalXp = user?.total_xp ?? 0;
 
+  const totalXp = user?.total_xp ?? 0;
+  const level = calculateLevel(totalXp);
   const { currentLevelXp, nextLevelXp, progressPercent } = getXpProgress(level, totalXp);
+
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
