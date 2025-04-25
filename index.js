@@ -27,6 +27,7 @@ import authenticateToken from "./middleware/authMiddleware.js";
 import "./cron/scheduler.js";
 import accountRoutes from "./routes/account.js";
 import { OpenAI } from "openai";
+import redis from "./utils/redisClient.js";
 
 dotenv.config();
 
@@ -448,57 +449,85 @@ router.get("/protected", authenticateToken, (req, res) => {
   res.json({ message: `Welcome, ${req.user.username}!`, user: req.user });
 });
 
-router.post("/ask", async (req, res) => {
-  const { message, threadId } = req.body;
+router.post(
+  "/ask",
+  rateLimiter(1, 10, "You're going too fast. Please wait a few seconds."), // 1 per 10 sec
+  async (req, res) => {
+    const { message, threadId } = req.body;
 
-  if (!message) return res.status(400).json({ error: "Message required." });
-
-  try {
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
-
-    // Create thread if needed
-    let thread = threadId;
-    if (!thread) {
-      const created = await openai.beta.threads.create();
-      thread = created.id;
+    if (!message || typeof message !== "string" || message.length > MAX_MESSAGE_LENGTH) {
+      return res.status(400).json({ error: "Message too long or missing." });
     }
 
-    // Add user message
-    await openai.beta.threads.messages.create(thread, {
-      role: "user",
-      content: message,
-    });
+    const ip = req.headers["cf-connecting-ip"] || req.ip;
+    const redisKey = `ask:${ip}:daily`;
 
-    // Run the assistant
-    const run = await openai.beta.threads.runs.create(thread, {
-      assistant_id: process.env.OPENAI_ASSISTANT_ID,
-    });
+    try {
+      // Check Redis limit
+      console.log("🚨 Redis IP Key:", redisKey);
+      const count = await redis.incr(redisKey);
+      if (count === 1) {
+        await redis.expire(redisKey, 60 * 60 * 24); // 24-hour TTL
+        const ttl = await redis.ttl(redisKey);
+        console.log("🕒 TTL set on key:", ttl);
+      }
 
-    // Poll until done
-    let runStatus = run.status;
-    while (runStatus !== "completed" && runStatus !== "failed") {
-      await new Promise((r) => setTimeout(r, 1000));
-      const runCheck = await openai.beta.threads.runs.retrieve(thread, run.id);
-      runStatus = runCheck.status;
+      if (count > MAX_DAILY_MESSAGES) {
+        return res.status(429).json({
+          error: "Daily usage limit exceeded. Please try again tomorrow.",
+        });
+      }
+
+      const openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+      });
+
+      let thread = threadId;
+      if (!thread) {
+        const created = await openai.beta.threads.create();
+        thread = created.id;
+      }
+
+      await openai.beta.threads.messages.create(thread, {
+        role: "user",
+        content: message,
+      });
+
+      const run = await openai.beta.threads.runs.create(thread, {
+        assistant_id: process.env.OPENAI_ASSISTANT_ID,
+      });
+
+      let runStatus = run.status;
+      let attempts = 0;
+
+      while (
+        runStatus !== "completed" &&
+        runStatus !== "failed" &&
+        attempts < MAX_ATTEMPTS
+      ) {
+        await new Promise((r) => setTimeout(r, 1000));
+        const runCheck = await openai.beta.threads.runs.retrieve(thread, run.id);
+        runStatus = runCheck.status;
+        attempts++;
+      }
+
+      if (runStatus === "failed" || attempts >= MAX_ATTEMPTS) {
+        throw new Error("Assistant run failed or timed out");
+      }
+
+      const messages = await openai.beta.threads.messages.list(thread);
+      const last = messages.data.find((m) => m.role === "assistant");
+
+      res.json({
+        threadId: thread,
+        reply: last?.content?.[0]?.text?.value || "No reply found.",
+      });
+    } catch (err) {
+      console.error("❌ AI Assistant Error:", err);
+      res.status(500).json({ error: "Failed to get assistant reply." });
     }
-
-    if (runStatus === "failed") throw new Error("Assistant run failed");
-
-    // Get assistant reply
-    const messages = await openai.beta.threads.messages.list(thread);
-    const last = messages.data.find((m) => m.role === "assistant");
-
-    res.json({
-      threadId: thread,
-      reply: last?.content?.[0]?.text?.value || "No reply found.",
-    });
-  } catch (err) {
-    console.error("❌ AI Assistant Error:", err);
-    res.status(500).json({ error: "Failed to get assistant reply." });
   }
-});
+);
 
 app.use("/api", router);
 
