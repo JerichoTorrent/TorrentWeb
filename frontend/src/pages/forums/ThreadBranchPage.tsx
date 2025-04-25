@@ -42,8 +42,8 @@ const ThreadBranchPage = () => {
         const threadRes = await fetch(`${API_BASE_URL}/api/forums/threads/${id}`, {
           method: "GET",
           headers: {
-            Authorization: `Bearer ${user?.token}`,
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            ...(user?.token ? { Authorization: `Bearer ${user.token}` } : {})
           },
           credentials: "include",
           signal: controller.signal
@@ -55,8 +55,8 @@ const ThreadBranchPage = () => {
         const repliesRes = await fetch(`${API_BASE_URL}/api/forums/threads/${id}/replies/${parentId}`, {
           method: "GET",
           headers: {
-            Authorization: `Bearer ${user?.token}`,
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            ...(user?.token ? { Authorization: `Bearer ${user.token}` } : {})
           },
           credentials: "include",
           signal: controller.signal
@@ -106,7 +106,7 @@ const ThreadBranchPage = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${user?.token}`,
+          ...(user?.token ? { Authorization: `Bearer ${user.token}` } : {})
         },
         body: JSON.stringify({ content, parent_id: replyToId }),
       });
@@ -162,7 +162,7 @@ const ThreadBranchPage = () => {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${user?.token}`,
+        ...(user?.token ? { Authorization: `Bearer ${user.token}` } : {})
       },
       body: JSON.stringify({ content: newContent }),
     });

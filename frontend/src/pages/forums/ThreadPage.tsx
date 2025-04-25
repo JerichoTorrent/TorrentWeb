@@ -41,8 +41,8 @@ const ThreadPage = () => {
         const res = await fetch(`${API_BASE_URL}/api/forums/threads/${id}`, {
           method: "GET",
           headers: {
-            "Authorization": `Bearer ${user?.token}`,
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            ...(user?.token ? { Authorization: `Bearer ${user.token}` } : {})
           },
           credentials: "include"
         });
@@ -53,8 +53,8 @@ const ThreadPage = () => {
         const repliesRes = await fetch(`${API_BASE_URL}/api/forums/threads/${id}/replies?page=${page}&limit=${limit}`, {
           method: "GET",
           headers: {
-            "Authorization": `Bearer ${user?.token}`,
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            ...(user?.token ? { Authorization: `Bearer ${user.token}` } : {})
           },
           credentials: "include"
         });
@@ -63,8 +63,8 @@ const ThreadPage = () => {
         const repRes = await fetch(`${API_BASE_URL}/api/forums/posts/${threadData.thread.id}/reputation`, {
           method: "GET",
           headers: {
-            "Authorization": `Bearer ${user?.token}`,
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            ...(user?.token ? { Authorization: `Bearer ${user.token}` } : {})
           },
           credentials: "include"
         });
@@ -103,7 +103,7 @@ const ThreadPage = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${user?.token}`,
+          ...(user?.token ? { Authorization: `Bearer ${user.token}` } : {})
         },
         body: JSON.stringify({
           content: replyInputs[inputKey],
@@ -171,7 +171,7 @@ const ThreadPage = () => {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${user?.token}`,
+          ...(user?.token ? { Authorization: `Bearer ${user.token}` } : {})
         },
         body: JSON.stringify({ content: newContent }),
       });

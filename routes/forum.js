@@ -110,7 +110,20 @@ router.get("/threads", async (req, res) => {
 });
 
 // GET thread by ID
-router.get("/threads/:id", authMiddleware, async (req, res) => {
+router.get("/threads/:id", async (req, res, next) => {
+  // Get token if present, but don't 401 the user unless further checks failed
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith("Bearer ")) {
+    const token = authHeader.split(" ")[1];
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = decoded;
+    } catch {
+      // Invalid token, ignore
+    }
+  }
+  next();
+}, async (req, res) => {
   const threadId = req.params.id;
 
   try {

@@ -72,7 +72,7 @@ const Header = () => {
       {/* Background Layers */}
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
         <ParticleBackground />
-        <img src="/sheep_corp.png" alt="Header Background" className="w-full h-full object-cover" />
+        <img src="/sheep_corp.webp" alt="Header Background" className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-[#1f1f1f]/50 backdrop-blur-sm" />
       </div>
 
@@ -185,7 +185,7 @@ const Header = () => {
           {/* Center - Logo */}
           <div className="flex justify-center">
             <img
-              src="/torrent_logo.png"
+              src="/torrent_logo.webp"
               alt="Torrent Logo"
               className="h-[12rem] sm:h-[12rem] mx-auto cursor-pointer"
               onClick={() => navigate("/")}
