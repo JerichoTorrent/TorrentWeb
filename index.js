@@ -121,10 +121,53 @@ function insertUuidDashes(uuid) {
 
 // Mojang UUID Fetcher
 async function getMinecraftUUID(username) {
-  const response = await fetch(`https://api.mojang.com/users/profiles/minecraft/${username}`);
-  if (!response.ok) return null;
-  const data = await response.json();
-  return insertUuidDashes(data.id);
+  if (!username) return null;
+
+  if (username.startsWith(".")) {
+    // Bedrock player detected
+    const gamertag = username.substring(1); // Strip the dot
+    try {
+      const response = await fetch(`https://api.geysermc.org/v2/xbox/xuid/${encodeURIComponent(gamertag)}`);
+      if (!response.ok) {
+        console.error("Failed to fetch Bedrock XUID from Geyser API");
+        return null;
+      }
+      const data = await response.json();
+      if (!data?.xuid) {
+        console.error("No XUID found for Bedrock gamertag.");
+        return null;
+      }
+
+      // Make the XUID into a UUID format by padding to 32 chars if needed
+      let xuid = data.xuid.toString();
+      if (xuid.length < 32) {
+        xuid = xuid.padStart(32, "0");
+      }
+
+      return insertUuidDashes(xuid);
+    } catch (err) {
+      console.error("Error fetching Bedrock XUID:", err);
+      return null;
+    }
+  } else {
+    // Java Edition player
+    try {
+      const response = await fetch(`https://api.mojang.com/users/profiles/minecraft/${username}`);
+      if (!response.ok) {
+        console.error("Failed to fetch Java UUID from Mojang API");
+        return null;
+      }
+      const data = await response.json();
+      if (!data?.id) {
+        console.error("No UUID found for Java username.");
+        return null;
+      }
+      return insertUuidDashes(data.id);
+    } catch (err) {
+      console.error("Error fetching Java UUID:", err);
+      return null;
+    }
+  }
 }
 
 // API Status Check

@@ -10,6 +10,12 @@ const Affiliates = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleCopyAshes = () => {
+    navigator.clipboard.writeText("ashesofheaven.co.uk");
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <PageLayout fullWidth>
       <div className="max-w-5xl mx-auto py-16 px-4 text-white">
@@ -109,7 +115,40 @@ const Affiliates = () => {
               </div>
             </div>
           </div>
+          <div className="border-t border-[#333]" />
 
+          {/* Ashes */}
+          <div className="flex flex-col md:flex-row items-center text-center md:text-left gap-6">
+            <img src="/ashes-logo.png" alt="Ashes of Heaven Logo" className="h-32 md:h-20" />
+            <div>
+              <h2 className="text-xl font-semibold text-purple-300">Ashes of Heaven</h2>
+              <p className="text-gray-300 mt-1">
+                Ashes of Heaven is a 16+ Java server , with a Focus on Roleplay in a Medieval/Fantasy setting. With a
+                welcoming community and land claims, a detailed and thought out economy, wars and alliances: Live your
+                Lord of the Rings or Game of Thrones dream on the server! With no mods to download, simply join the
+                dicord and apply to enter a world filled with varied Kingdoms, Moveable ships, Flyable Dragons and more!
+              </p>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4 mt-4">
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={handleCopyAshes}
+                    className="bg-yellow-400 text-black font-semibold px-4 py-2 rounded hover:bg-purple-500 hover:text-white transition"
+                  >
+                    {copied ? "Copied!" : "Copy IP: ashesofheaven.co.uk"}
+                  </button>
+                </div>
+                <a
+                  href="https://discord.gg/BDD4k7Tz7c"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-4 py-2 bg-[#5865F2] text-white rounded hover:bg-[#4752C4] transition"
+                >
+                  <img src="/discord.png" alt="Discord" className="h-5 w-5" />
+                  Join Discord
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </PageLayout>
