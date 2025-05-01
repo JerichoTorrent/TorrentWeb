@@ -1,0 +1,54 @@
+{
+  "name": "torrentweb",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "This is a full-stack React + TypeScript template for Minecraft server websites with user login, blog, voting, account dashboard, and more. Originally designed for the Torrent Network, it's now available for anyone to fork and adapt.\r ---",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JerichoTorrent/TorrentWeb.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/JerichoTorrent/TorrentWeb/issues"
+  },
+  "homepage": "https://github.com/JerichoTorrent/TorrentWeb#readme",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.787.0",
+    "@aws-sdk/credential-providers": "^3.787.0",
+    "bcrypt": "^5.1.1",
+    "clamav.js": "^0.12.0",
+    "connect-history-api-fallback": "^2.0.0",
+    "cors": "^2.8.5",
+    "crypto": "^1.0.1",
+    "discord.js": "^14.18.0",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "express-rate-limit": "^7.5.0",
+    "express-session": "^1.18.1",
+    "glob": "^11.0.2",
+    "gray-matter": "^4.0.3",
+    "jsonwebtoken": "^9.0.2",
+    "jwt-decode": "^4.0.0",
+    "mammoth": "^1.9.0",
+    "marked": "^15.0.10",
+    "multer": "^1.4.5-lts.2",
+    "mysql2": "^3.14.0",
+    "node-cron": "^3.0.3",
+    "node-fetch": "^3.3.2",
+    "nodemailer": "^6.10.1",
+    "openai": "^4.96.0",
+    "qrcode": "^1.5.4",
+    "randomstring": "^1.3.1",
+    "redis": "^4.7.0",
+    "remark-gfm": "^4.0.1",
+    "sharp": "^0.34.1",
+    "simple-git": "^3.27.0",
+    "speakeasy": "^2.0.0"
+  }
+}
